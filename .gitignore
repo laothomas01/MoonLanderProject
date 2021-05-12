@@ -1,0 +1,17 @@
+.vs/SpaceShipPractice/v15/.suo
+*.db
+*.ipch
+*.make
+bin/data/.gitkeep
+*.dll
+*.exp
+*.ilk
+*.lib
+*.pdb
+*.rc
+*.obj
+*.tlog
+*.log
+*.vcxproj
+*.filters
+*.user
