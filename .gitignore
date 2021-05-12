@@ -17,3 +17,8 @@ bin/data/.gitkeep
 *.user
 MoonLanderGitHub/Lab6SpatialPartioning/bin/data/geo/terrain2/bin/data/.gitkeep
 MoonLanderGitHub/Lab6SpatialPartioning/bin/data/geo/terrain2/.vs/terrain2/v14/.suo
+MoonLanderGitHub/Lab6SpatialPartioning/bin/data/.gitkeep
+MoonLanderGitHub/Lab6SpatialPartioning/.vs/Lab6SpatialPartioning/v15/Browse.VC.opendb
+*.db-shm
+*.db-wal
+*.stl
