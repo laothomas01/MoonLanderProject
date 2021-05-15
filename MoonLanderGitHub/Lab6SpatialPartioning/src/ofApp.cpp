@@ -35,16 +35,45 @@ void ofApp::setup() {
 	ofEnableSmoothing();
 	ofEnableDepthTest();
 
+	rotation = 45.0;
+
 	// setup rudimentary lighting 
 	//
 	initLightingAndMaterials();
 	//load the terrain
 	printf("Map loaded. Creating Octree....\n");
-	mars.loadModel("geo/mars-low-5x-v2.obj");
-	mars.setScaleNormalization(false);
-	mars.setRotation(0, 180, 0, 0, 1);
-	octree.create(mars.getMesh(0), 20);
-	printf("Octree created!");
+	if (mars.loadModel("geo/mars-low-5x-v2.obj"))
+	{
+		mars.setScaleNormalization(false);
+		printf("Map loaded, creating octree...\n");
+		//time goes here if you want
+		octree.create(mars.getMesh(0), 20);
+		printf("Octree created!");
+	}
+	else
+	{
+		printf("Map could not be loaded.\n");
+		ofExit(0);
+	}
+	if (rover.loadModel("geo/lander.obj"))
+	{
+		printf("ROVER HAS BEEN LOADED!");
+		rover.setScale(0.01, 0.01, 0.01);
+		rover.setRotation(0, rotation, 1, 0, 0);
+		rover.setPosition(0, 5, 0);
+		bRoverLoaded = true;
+
+	}
+	else
+	{
+		printf("Vehicle could not be loaded.\n");
+		ofExit(0);
+	}
+
+
+	//mars.setRotation(0, 180, 0, 0, 1);
+
+
 	//  Create Octree for testing.
 
 
@@ -75,10 +104,15 @@ void ofApp::setup() {
 // incrementally update scene (animation)
 //
 void ofApp::update() {
-	//cout << "ROVER POSITION:" << rover.getPosition() << endl;
+
 	//integrate();
 	//cout << "ROVER POSITION:" << rover.getPosition() << endl;
 	//force = glm::vec3(0, 0, 0);
+	cout << "ROVER POSITION BEFORE INTEGRATE:\n" << rover.getPosition() << endl;
+	integrate();
+	cout << "ROVER POSITION AFTER: \n" << rover.getPosition() << endl;
+	//zero out the forces
+	force = glm::vec3(0, 0, 0);
 
 }
 //--------------------------------------------------------------
@@ -91,6 +125,8 @@ void ofApp::draw() {
 	glDepthMask(true);
 
 	cam.begin();
+	//push objects you want to draw on the rover or bounding box onto the object space
+
 	ofPushMatrix();
 	if (bWireframe) {                    // wireframe mode  (include axis)
 		ofDisableLighting();
@@ -187,6 +223,8 @@ void ofApp::draw() {
 		ofSetColor(ofColor::lightGreen);
 		ofDrawSphere(p, .02 * d.length());
 	}
+	ofSetColor(ofColor::red);
+	ofDrawLine(rover.getPosition(), rover.getPosition() + heading() * 1000);
 
 	ofPopMatrix();
 	cam.end();
@@ -205,15 +243,18 @@ void ofApp::drawAxis(ofVec3f location) {
 	ofSetLineWidth(1.0);
 
 	// X Axis
+	//RED
 	ofSetColor(ofColor(255, 0, 0));
 	ofDrawLine(ofPoint(0, 0, 0), ofPoint(1, 0, 0));
 
 
 	// Y Axis
+	//GREEN
 	ofSetColor(ofColor(0, 255, 0));
 	ofDrawLine(ofPoint(0, 0, 0), ofPoint(0, 1, 0));
 
 	// Z Axis
+	//BLUE
 	ofSetColor(ofColor(0, 0, 255));
 	ofDrawLine(ofPoint(0, 0, 0), ofPoint(0, 0, 1));
 
@@ -300,7 +341,13 @@ void ofApp::keyPressed(int key) {
 		//left, right movement = X coordinates
 		//towards the screen = Z coordinates
 	case OF_KEY_UP: // go up in the Y direction
-		rover.setPosition(0, roverPosition.y += 10, 0);
+		bThrust = true;
+		force = heading() * float(thrust);
+		break;
+	case OF_KEY_DOWN:
+		bThrust = true;
+		force = heading() * -float(thrust);
+		break;
 	default:
 		break;
 	}
@@ -576,7 +623,7 @@ void ofApp::dragEvent(ofDragInfo dragInfo) {
 	if (rover.loadModel(dragInfo.files[0])) {
 		bRoverLoaded = true;
 		rover.setScaleNormalization(false);
-		rover.setRotation(0, 180, 0, 0, 1);
+		//rover.setRotation(0, 180, 0, 0, 1);
 		rover.setPosition(0, 0, 0);
 		cout << "number of meshes: " << rover.getNumMeshes() << endl;
 		bboxList.clear();
@@ -654,24 +701,4 @@ glm::vec3 ofApp::getMousePointOnPlane(glm::vec3 planePt, glm::vec3 planeNorm) {
 	else return glm::vec3(0, 0, 0);
 }
 
-//void ofApp::integrate()
-//{
-//	float framerate = ofGetFrameRate();
-//	float dt = 1.0 / framerate;
-//
-//	// linear motion
-//	//
-//
-//	rover.getPosition() += (velocity * dt);
-//	glm::vec3 accel = acceleration;
-//	accel += (force * 1.0 / mass);
-//	velocity += accel * dt;
-//	velocity *= damping;
-//
-//	//angular motion
-//	rotation += (angularVelocity * dt);
-//	float a = angularAcceleration;
-//	a += (angularForce * 1.0 / mass);
-//	angularVelocity += a * dt;
-//	angularVelocity *= damping;
-//}
+

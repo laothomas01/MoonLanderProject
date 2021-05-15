@@ -111,7 +111,8 @@ public:
 
 	glm::vec3 heading()
 	{
-		glm::vec3 initialHeading = glm::vec3(0, 1, 0); // heading at start
+		//start the facing direction in the Z axis
+		glm::vec3 initialHeading = glm::vec3(0, 0, 1); // heading at start
 		//Mrot means matrix rotation
 		glm::mat4 Mrot = glm::rotate(glm::mat4(1.0), glm::radians(rotation), glm::vec3(0, 0, 1));
 		glm::vec3 h = Mrot * glm::vec4(initialHeading, 1);
@@ -128,6 +129,26 @@ public:
 	glm::vec3 roverPosition;
 
 	void ofApp::integrate() {
-			
+		// what is ofGetFrameRate dependent upon
+		//float framerate = ofGetFrameRate();	// breaking
+		float framerate = 60;	// workaround
+		float dt = 1.0 / framerate;
+		roverPosition = rover.getPosition();
+		cout << "FR: " << framerate << endl;
+		cout << "DT: " << dt << endl;
+		cout << "RP: " << roverPosition << endl;
+		//linear motion
+		roverPosition += velocity * dt;
+		cout << "RP Update: " << roverPosition << endl;
+		//rover.setPosition(roverPosition.x = roverPosition.x + (velocity.x * 1/60), roverPosition.y = roverPosition.y + (velocity.z * 1/60), roverPosition.z = roverPosition.z + (velocity.z * 1/60));
+		rover.setPosition(roverPosition.x + (velocity.x * dt),
+			roverPosition.y + (velocity.z * dt),
+			roverPosition.z + (velocity.z * dt));
+		rover.setPosition(roverPosition.x, roverPosition.y, roverPosition.z);
+
+		glm::vec3 accel = acceleration;
+		accel += (force * 1.0 / mass);
+		velocity += accel * dt;
+		velocity *= damping;
 	}
 };
