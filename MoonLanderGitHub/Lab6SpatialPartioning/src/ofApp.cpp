@@ -27,15 +27,19 @@ void ofApp::setup() {
 	bRoverLoaded = false;
 	bTerrainSelected = true;
 	//	ofSetWindowShape(1024, 768);
-	cam.setDistance(10);
-	cam.setNearClip(.1);
-	cam.setFov(65.5);   // approx equivalent to 28mm in 35mm format
+
+	//GUI PANEL THIS 
+	cam.setDistance(52.48);
+	cam.setNearClip(8.425);
+	cam.setFov(56.44);   // approx equivalent to 28mm in 35mm format
+
+
 	ofSetVerticalSync(true);
 	cam.disableMouseInput();
 	ofEnableSmoothing();
 	ofEnableDepthTest();
 
-	rotation = 45.0;
+	rotation = 180.0;
 
 	// setup rudimentary lighting 
 	//
@@ -80,6 +84,7 @@ void ofApp::setup() {
 	//Octree level gui
 	gui.setup();
 	gui.add(numLevels.setup("Number of Octree Levels", 1, 1, 10));
+
 	bHide = false;
 
 
@@ -97,13 +102,25 @@ void ofApp::setup() {
 
 
 	gui.setup();
-	gui.add(thrust.setup("Thrust", 1, 1, 1000));
+	gui.add(thrust.setup("Thrust", 100, 1, 1000));
+	gui.add(camDist.setup("Cam Distance", 52.48, 1, 100));
+	gui.add(camNearClip.setup("Cam Near Clip", 8.425, 1, 100));
+	gui.add(camSetFOV.setup("Cam FOV", 56.44, 1, 100));
+
+
 
 }
 //--------------------------------------------------------------
 // incrementally update scene (animation)
 //
 void ofApp::update() {
+
+	cout << "CAMERA POSITION:\n" << cam.getPosition() << endl;
+
+	cam.setDistance(camDist);
+	cam.setNearClip(camNearClip);
+	cam.setFov(camSetFOV);
+
 
 	//integrate();
 	//cout << "ROVER POSITION:" << rover.getPosition() << endl;
@@ -223,8 +240,8 @@ void ofApp::draw() {
 		ofSetColor(ofColor::lightGreen);
 		ofDrawSphere(p, .02 * d.length());
 	}
-	ofSetColor(ofColor::red);
-	ofDrawLine(rover.getPosition(), rover.getPosition() + heading() * 1000);
+	//ofSetColor(ofColor::red);
+	//ofDrawLine(rover.getPosition(), rover.getPosition() * 1000);
 
 	ofPopMatrix();
 	cam.end();
@@ -265,21 +282,10 @@ void ofApp::drawAxis(ofVec3f location) {
 void ofApp::keyPressed(int key) {
 	glm::vec3 roverPosition = rover.getPosition();
 	switch (key) {
-	case',':
-		//rover.setRotation(currentRotations++, 90, 1, 0, 0);
-
-		rover.setRotation(0, 45, 1, 0, 0);
-
-		break;
-	case '.':
-		rover.setRotation(1, 45, 0, 1, 0);
-		break;
-	case '/':
-		rover.setRotation(2, 45, 0, 0, 1);
-		break;
 	case 'B':
 	case 'b':
-		bDisplayBBoxes = !bDisplayBBoxes;
+		//this crashes my program for some odd reason
+		//bDisplayBBoxes = !bDisplayBBoxes;
 		break;
 	case 'C':
 	case 'c':
@@ -329,9 +335,7 @@ void ofApp::keyPressed(int key) {
 		cam.enableMouseInput();
 		bAltKeyDown = true;
 		break;
-	case OF_KEY_CONTROL:
-		bCtrlKeyDown = true;
-		break;
+
 	case OF_KEY_SHIFT:
 		break;
 	case OF_KEY_DEL:
@@ -340,13 +344,30 @@ void ofApp::keyPressed(int key) {
 		//up = Y coordinates
 		//left, right movement = X coordinates
 		//towards the screen = Z coordinates
-	case OF_KEY_UP: // go up in the Y direction
+	case OF_KEY_UP:
 		bThrust = true;
-		force = heading() * float(thrust);
+		force = float(thrust) * ofVec3f(1, 0, 0);
+		/*angularForce = 100.0;*/
 		break;
 	case OF_KEY_DOWN:
 		bThrust = true;
-		force = heading() * -float(thrust);
+		force = float(thrust) * ofVec3f(-1, 0, 0);
+		//angularForce = -100.0;
+		break;
+	case OF_KEY_RIGHT: // go up in the Y direction
+		bThrust = true;
+		force = float(thrust) * ofVec3f(0, 0, 1);
+		break;
+	case OF_KEY_LEFT:
+		bThrust = true;
+		//angularVelocity = 0;
+		force = float(thrust) * ofVec3f(0, 0, -1);
+		break;
+	case ' ':
+		force = float(thrust) * ofVec3f(0, 1, 0);
+		break;
+	case OF_KEY_CONTROL:
+		force = float(thrust) * ofVec3f(0, -1, 0);
 		break;
 	default:
 		break;
@@ -373,9 +394,10 @@ void ofApp::keyReleased(int key) {
 		cam.disableMouseInput();
 		bAltKeyDown = false;
 		break;
-	case OF_KEY_CONTROL:
-		bCtrlKeyDown = false;
-		break;
+
+		/*case OF_KEY_CONTROL:
+			bCtrlKeyDown = false;
+			break;*/
 	case OF_KEY_SHIFT:
 		break;
 	default:

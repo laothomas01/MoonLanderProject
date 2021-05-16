@@ -108,22 +108,21 @@ public:
 
 	int maxRotations = 4;
 	int currentRotations = 0;
-
-	glm::vec3 heading()
-	{
-		//start the facing direction in the Z axis
-		glm::vec3 initialHeading = glm::vec3(0, 0, 1); // heading at start
-		//Mrot means matrix rotation
-		glm::mat4 Mrot = glm::rotate(glm::mat4(1.0), glm::radians(rotation), glm::vec3(0, 0, 1));
-		glm::vec3 h = Mrot * glm::vec4(initialHeading, 1);
-		return glm::normalize(h);
-	}
+	glm::vec3 initialHeading = glm::vec3(0, 0, 1); // heading at start
+	//glm::vec3 heading()
+	//{
+	//	//start the facing direction in the Z axis
+	//	//Mrot means matrix rotation
+	//	glm::mat4 Mrot = glm::rotate(glm::mat4(1.0), glm::radians(rotation), glm::vec3(0, 0, 1));
+	//	glm::vec3 h = Mrot * glm::vec4(initialHeading, 1);
+	//	return glm::normalize(h);
+	//}
 
 
 	//gui
 
 	ofxPanel gui;
-	ofxFloatSlider thrust;
+	ofxFloatSlider thrust, camDist, camNearClip, camSetFOV;
 
 
 	glm::vec3 roverPosition;
@@ -150,5 +149,12 @@ public:
 		accel += (force * 1.0 / mass);
 		velocity += accel * dt;
 		velocity *= damping;
+
+		/*rotation += (angularVelocity * dt);
+		rover.setRotation(0, rotation, 1, 0, 0);
+		float a = angularAcceleration;
+		a += (angularForce * 1.0 / mass);
+		angularVelocity += a * dt;
+		angularVelocity *= damping;*/
 	}
 };
