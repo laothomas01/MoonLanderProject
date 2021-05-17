@@ -32,10 +32,13 @@ public:
 	bool MouseIntersect(const Ray &, const TreeNode & node, TreeNode & nodeRtn);
 	//intersection with a box
 	/*
-	
+
 	work on this intersect for the homework project
 	*/
 	bool BoxIntersect(const Box &, TreeNode & node, vector<Box> & boxListRtn);
+
+	//collisions detection
+	bool intersect(const ofVec3f &, const TreeNode & node, TreeNode & nodeRtn);
 
 
 	//draw hierarchal boxes
@@ -43,7 +46,7 @@ public:
 
 	//recursive drawing of the octree
 	void draw(int numLevels, int level) {
-		draw(root,numLevels, level);
+		draw(root, numLevels, level);
 	}
 
 
@@ -56,7 +59,7 @@ public:
 	static Box meshBounds(const ofMesh &);
 	//determines which points are in which box
 	int getMeshPointsInBox(const ofMesh &mesh, const vector<int> & points, Box & box, vector<int> & pointsRtn);
-	
+
 	int getMeshFacesInBox(const ofMesh &mesh, const vector<int> & faces, Box & box, vector<int> & facesRtn);
 
 	//used to subdivide a box into 8 boxes

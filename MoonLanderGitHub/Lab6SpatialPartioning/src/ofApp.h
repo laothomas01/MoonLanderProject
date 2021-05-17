@@ -53,14 +53,19 @@ public:
 	glm::vec3 velocity = glm::vec3(0, 0, 0);
 	glm::vec3 acceleration = glm::vec3(0, 0, 0);
 	glm::vec3 force = glm::vec3(0, 0, 0);
-	float gravity = 0.0;
+	glm::vec3 gravitationalForce;
+	float terrainGravity = 3.711;
 	float mass = 1.0;
 	float damping = .99;
 	//angular physics
 	float angularForce = 0;
 	float angularVelocity = 0.0;
 	float angularAcceleration = 0.0;
+
 	bool bThrust = false;
+	bool bStart = false;
+	bool bOver = false;
+
 	//void integrate();
 
 
@@ -68,7 +73,9 @@ public:
 
 	ofLight light;
 	//bounds: the bounding box of the rover
-	Box roverBounds, boundingBox;
+	Box roverBounds;
+
+
 	Box testBox;
 	vector<Box> colBoxList;
 	bool bRoverSelected = false;
@@ -91,10 +98,13 @@ public:
 	bool bDisplayLeafNodes = false;
 	bool bDisplayOctree = false;
 	bool bDisplayBBoxes = false;
-
+	bool bgrounded = false;
 	bool bRoverLoaded;
 	bool bTerrainSelected;
 
+
+	float score = 0.0;
+	float altitude = 0.0;
 	ofVec3f selectedPoint;
 	ofVec3f intersectPoint;
 
@@ -103,6 +113,7 @@ public:
 	const float selectionRange = 4.0;
 
 	int startTime;
+	int timer;
 
 	int i = 0;
 
@@ -127,18 +138,21 @@ public:
 
 	glm::vec3 roverPosition;
 
+	bool rotateX = false;
+	bool rotateY = false;
+	bool rotateZ = false;
 	void ofApp::integrate() {
 		// what is ofGetFrameRate dependent upon
 		//float framerate = ofGetFrameRate();	// breaking
 		float framerate = 60;	// workaround
 		float dt = 1.0 / framerate;
 		roverPosition = rover.getPosition();
-		cout << "FR: " << framerate << endl;
-		cout << "DT: " << dt << endl;
-		cout << "RP: " << roverPosition << endl;
+		//cout << "FR: " << framerate << endl;
+		//cout << "DT: " << dt << endl;
+		//cout << "RP: " << roverPosition << endl;
 		//linear motion
 		roverPosition += velocity * dt;
-		cout << "RP Update: " << roverPosition << endl;
+		//cout << "RP Update: " << roverPosition << endl;
 		//rover.setPosition(roverPosition.x = roverPosition.x + (velocity.x * 1/60), roverPosition.y = roverPosition.y + (velocity.z * 1/60), roverPosition.z = roverPosition.z + (velocity.z * 1/60));
 		rover.setPosition(roverPosition.x + (velocity.x * dt),
 			roverPosition.y + (velocity.z * dt),
@@ -150,11 +164,28 @@ public:
 		velocity += accel * dt;
 		velocity *= damping;
 
-		/*rotation += (angularVelocity * dt);
+		rotation += (angularVelocity * dt);
+
 		rover.setRotation(0, rotation, 1, 0, 0);
+
+		//force += gravitationalForce * mass;
+		/*if (rotateY)
+		{
+			rover.setRotation(1, rotation, 1, 0, 0);
+		}
+		if (rotateZ)
+		{
+			rover.setRotation(2, rotation, 0, 0, 1);
+		}*/
 		float a = angularAcceleration;
 		a += (angularForce * 1.0 / mass);
 		angularVelocity += a * dt;
-		angularVelocity *= damping;*/
+		angularVelocity *= damping;
 	}
+	//for taking multiply key inputs
+	map<int, bool> keymap;
+
+	void checkCollisions();
+	void drawText();
 };
+

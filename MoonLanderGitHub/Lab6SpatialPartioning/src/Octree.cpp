@@ -219,15 +219,15 @@ bool Octree::MouseIntersect(const Ray &ray, const TreeNode & node, TreeNode & no
 	if (node.box.intersect(ray, 0, INFINITE))
 	{
 		int startTime = ofGetElapsedTimeMillis();
-	/*	cout << "BEGIN RAY INTERSECTION SELECTION\n" << endl;
-		cout << "START TIME:" << startTime / 1000 << "SECONDS\n" << endl;*/
+		/*	cout << "BEGIN RAY INTERSECTION SELECTION\n" << endl;
+			cout << "START TIME:" << startTime / 1000 << "SECONDS\n" << endl;*/
 		if (node.children.size() == 0)
 		{
 			nodeRtn = node;
 			intersects = true;
 			int endTime = ofGetElapsedTimeMillis();
-		/*	cout << "END RAY INTERSECTION SELECTION\n" << endl;
-			cout << "END TIME:" << endTime / 1000 << "SECONDS\n" << endl;*/
+			/*	cout << "END RAY INTERSECTION SELECTION\n" << endl;
+				cout << "END TIME:" << endTime / 1000 << "SECONDS\n" << endl;*/
 		}
 		else {
 			for (int i = 0; i < node.children.size(); i++) {
@@ -239,10 +239,10 @@ bool Octree::MouseIntersect(const Ray &ray, const TreeNode & node, TreeNode & no
 				}
 			}
 			int endTime = ofGetElapsedTimeMillis();
-		/*	cout << "END RAY INTERSECTION SELECTION\n" << endl;
-			cout << "END TIME:" << endTime / 1000 << "SECONDS\n" << endl;*/
+			/*	cout << "END RAY INTERSECTION SELECTION\n" << endl;
+				cout << "END TIME:" << endTime / 1000 << "SECONDS\n" << endl;*/
 		}
-		
+
 	}
 
 	return intersects;
@@ -266,10 +266,29 @@ bool Octree::BoxIntersect(const Box &box, TreeNode & node, vector<Box> & boxList
 		}
 	}
 	return intersects;
-
-
-
-
+}
+//Checking collision
+bool Octree::intersect(const ofVec3f & vec, const TreeNode & node, TreeNode & nodeRtn)
+{
+	Box temp = node.box;
+	if (temp.inside(Vector3(vec.x, vec.y, vec.z)))
+	{
+		if (node.children.size() == 0)
+		{
+			nodeRtn = node;
+			return true;
+		}
+		else
+		{
+			for (unsigned int i = 0; i < node.children.size(); i++)
+			{
+				if (intersect(vec, node.children[i], nodeRtn))
+				{
+					return true;
+				}
+			}
+		}
+	}
 }
 
 void Octree::draw(TreeNode & node, int numLevels, int level) {

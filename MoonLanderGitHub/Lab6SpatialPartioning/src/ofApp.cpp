@@ -27,19 +27,19 @@ void ofApp::setup() {
 	bRoverLoaded = false;
 	bTerrainSelected = true;
 	//	ofSetWindowShape(1024, 768);
-
+	gravitationalForce = glm::vec3(0, -terrainGravity, 0);
 	//GUI PANEL THIS 
 	cam.setDistance(52.48);
-	cam.setNearClip(8.425);
-	cam.setFov(56.44);   // approx equivalent to 28mm in 35mm format
-
+	//cam.setNearClip(8.425);
+	//cam.setFov(56.44);   // approx equivalent to 28mm in 35mm format
+	timer = 0;
 
 	ofSetVerticalSync(true);
 	cam.disableMouseInput();
 	ofEnableSmoothing();
 	ofEnableDepthTest();
 
-	rotation = 180.0;
+	rotation = 90.0;
 
 	// setup rudimentary lighting 
 	//
@@ -62,11 +62,10 @@ void ofApp::setup() {
 	if (rover.loadModel("geo/lander.obj"))
 	{
 		printf("ROVER HAS BEEN LOADED!");
-		rover.setScale(0.01, 0.01, 0.01);
-		rover.setRotation(0, rotation, 1, 0, 0);
+		rover.setScale(0.005, 0.005, 0.005);
+		rover.setRotation(0, 180.0, 1, 0, 0);
 		rover.setPosition(0, 5, 0);
 		bRoverLoaded = true;
-
 	}
 	else
 	{
@@ -103,7 +102,7 @@ void ofApp::setup() {
 
 	gui.setup();
 	gui.add(thrust.setup("Thrust", 100, 1, 1000));
-	gui.add(camDist.setup("Cam Distance", 52.48, 1, 100));
+	//gui.add(camDist.setup("Cam Distance", 52.48, 1, 100));
 	gui.add(camNearClip.setup("Cam Near Clip", 8.425, 1, 100));
 	gui.add(camSetFOV.setup("Cam FOV", 56.44, 1, 100));
 
@@ -115,7 +114,22 @@ void ofApp::setup() {
 //
 void ofApp::update() {
 
-	cout << "CAMERA POSITION:\n" << cam.getPosition() << endl;
+	checkCollisions();
+	if (bgrounded)
+	{
+		velocity = glm::vec3(0, 0, 0);
+		acceleration = glm::vec3(0, 0, 0);
+		force = glm::vec3(0, 0, 0);
+		bOver = true;
+		cout << "GAME OVER" << endl;
+	}
+
+	int tempTime = ofGetElapsedTimeMillis() / 1000;
+	if (!bOver)
+	{
+		timer = tempTime - startTime;
+	}
+	//cout << "CAMERA POSITION:\n" << cam.getPosition() << endl;
 
 	cam.setDistance(camDist);
 	cam.setNearClip(camNearClip);
@@ -125,9 +139,10 @@ void ofApp::update() {
 	//integrate();
 	//cout << "ROVER POSITION:" << rover.getPosition() << endl;
 	//force = glm::vec3(0, 0, 0);
-	cout << "ROVER POSITION BEFORE INTEGRATE:\n" << rover.getPosition() << endl;
+	//cout << "ROVER POSITION BEFORE INTEGRATE:\n" << rover.getPosition() << endl;
 	integrate();
-	cout << "ROVER POSITION AFTER: \n" << rover.getPosition() << endl;
+
+	//cout << "ROVER POSITION AFTER: \n" << rover.getPosition() << endl;
 	//zero out the forces
 	force = glm::vec3(0, 0, 0);
 
@@ -180,11 +195,11 @@ void ofApp::draw() {
 				ofVec3f min = rover.getSceneMin() + rover.getPosition();
 				ofVec3f max = rover.getSceneMax() + rover.getPosition();
 
-				boundingBox = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
+				roverBounds = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
 
 				ofSetColor(ofColor::green);
 				ofNoFill();
-				Octree::drawBox(boundingBox);
+				Octree::drawBox(roverBounds);
 
 				// draw colliding boxes
 				//
@@ -280,6 +295,7 @@ void ofApp::drawAxis(ofVec3f location) {
 
 
 void ofApp::keyPressed(int key) {
+	//insert multiply key inputs later
 	glm::vec3 roverPosition = rover.getPosition();
 	switch (key) {
 	case 'B':
@@ -304,8 +320,8 @@ void ofApp::keyPressed(int key) {
 	case 'H':
 	case 'h':
 		break;
-	case 'L':
-	case 'l':
+	case 'n':
+	case 'N':
 		bDisplayLeafNodes = !bDisplayLeafNodes;
 		break;
 	case 'O':
@@ -344,30 +360,49 @@ void ofApp::keyPressed(int key) {
 		//up = Y coordinates
 		//left, right movement = X coordinates
 		//towards the screen = Z coordinates
+
+		//X DIRECTION
 	case OF_KEY_UP:
 		bThrust = true;
-		force = float(thrust) * ofVec3f(1, 0, 0);
-		/*angularForce = 100.0;*/
+		force = float(thrust) * ofVec3f(1, 0, 0) + gravitationalForce * mass;
+
+		angularVelocity = 0;
 		break;
 	case OF_KEY_DOWN:
 		bThrust = true;
-		force = float(thrust) * ofVec3f(-1, 0, 0);
-		//angularForce = -100.0;
+		force = float(thrust) * ofVec3f(-1, 0, 0) + gravitationalForce * mass;
+		angularVelocity = 0;
 		break;
-	case OF_KEY_RIGHT: // go up in the Y direction
+		//Z DIRECTION
+	case OF_KEY_RIGHT:
 		bThrust = true;
-		force = float(thrust) * ofVec3f(0, 0, 1);
+		force = float(thrust) * ofVec3f(0, 0, 1) + gravitationalForce * mass;
+		angularVelocity = 0;
 		break;
 	case OF_KEY_LEFT:
 		bThrust = true;
-		//angularVelocity = 0;
-		force = float(thrust) * ofVec3f(0, 0, -1);
+		force = float(thrust) * ofVec3f(0, 0, 1) + gravitationalForce * mass;
+		angularVelocity = 0;
 		break;
+		//Y DIRECTION
 	case ' ':
-		force = float(thrust) * ofVec3f(0, 1, 0);
+		force = float(thrust) * ofVec3f(0, 1, 0) + gravitationalForce * mass;
+		angularVelocity = 0;
 		break;
 	case OF_KEY_CONTROL:
-		force = float(thrust) * ofVec3f(0, -1, 0);
+		force = float(thrust) * ofVec3f(0, -1, 0) + gravitationalForce * mass;
+		angularVelocity = 0;
+		break;
+		//rotation inputs
+	case 'j':
+	case 'J':
+		bThrust = true;
+		angularForce = 100.0;
+		break;
+	case 'l':
+	case 'L':
+		bThrust = true;
+		angularForce = -100.0;
 		break;
 	default:
 		break;
@@ -388,7 +423,34 @@ void ofApp::togglePointsDisplay() {
 
 void ofApp::keyReleased(int key) {
 
-	switch (key) {
+	switch (key)
+	{
+
+	case 'j':
+	case 'J':
+		bThrust = false;
+		angularForce = 0;
+		break;
+	case 'l':
+	case 'L':
+		bThrust = false;
+		angularForce = 0;
+		break;
+		//break;
+	//case 'j':
+	//case 'J':
+	//	angularForce = 0;
+	//	bThrust = false;
+	//	//break;
+	//case 'l':
+	//case 'L':
+	//	bThrust = 0;
+	//	angularForce = 0;
+		//break;
+
+
+
+
 
 	case OF_KEY_ALT:
 		cam.disableMouseInput();
@@ -418,7 +480,7 @@ void ofApp::mouseMoved(int x, int y) {
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button) {
 
-	// if moving camera, don't allow mouse interaction
+	// if moving camera, don'ft allow mouse interaction
 	//
 	if (cam.getMouseInputEnabled()) return;
 
@@ -500,13 +562,16 @@ void ofApp::mouseDragged(int x, int y, int button) {
 		ofVec3f min = rover.getSceneMin() + rover.getPosition();
 		ofVec3f max = rover.getSceneMax() + rover.getPosition();
 
-		Box boundingBox = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
+		Box roverBounds = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
 
 		colBoxList.clear();
-		octree.BoxIntersect(boundingBox, octree.root, colBoxList);
+		//if the octree intersects the rover bounds, 
+		//octree intersects, boxes are pushed on to an array of collision boxes
+		octree.BoxIntersect(roverBounds, octree.root, colBoxList);
 
 
-		if (boundingBox.overlap(testBox)) {
+
+		if (roverBounds.overlap(testBox)) {
 			cout << "overlap" << endl;
 		}
 		else {
@@ -690,6 +755,7 @@ void ofApp::dragEvent(ofDragInfo dragInfo) {
 			// set up bounding box for rover while we are at it
 			//
 			roverBounds = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
+
 		}
 	}
 
@@ -722,5 +788,54 @@ glm::vec3 ofApp::getMousePointOnPlane(glm::vec3 planePt, glm::vec3 planeNorm) {
 	}
 	else return glm::vec3(0, 0, 0);
 }
+
+
+void ofApp::checkCollisions()
+{
+	ofVec3f min = rover.getSceneMin() + rover.getPosition();
+	ofVec3f max = rover.getSceneMax() + rover.getPosition();
+
+	Box roverBounds = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
+
+	colBoxList.clear();
+	//if the octree intersects the rover bounds, 
+	//octree intersects, boxes are pushed on to an array of collision boxes
+	if (octree.BoxIntersect(roverBounds, octree.root, colBoxList))
+	{
+		printf("BOX HAS INTERSECTED OCTREE!");
+		bgrounded = true;
+		//zero out gravity
+		gravitationalForce = glm::vec3(0, 0, 0);
+
+	}
+
+
+
+	/*if (roverBounds.overlap(testBox)) {
+		cout << "overlap" << endl;
+	}
+	else {
+		cout << "OK" << endl;
+	}*/
+
+}
+void ofApp::drawText()
+{
+	ofSetColor(ofColor::white);
+	string altitudeText = "Altitude: " + std::to_string(altitude);
+
+	//60 frames per second
+	int framerate = 60;
+
+	string fpsText = "Frame Rate:" + std::to_string(framerate);
+
+	string timerText = "Time: " + std::to_string(timer);
+
+	ofDrawBitmapString(altitudeText, 10, 15);
+	ofDrawBitmapString(fpsText, ofGetWindowWidth() - 130, 15);
+	ofDrawBitmapString(timerText, 10, 40);
+}
+//draws landing zones
+
 
 
