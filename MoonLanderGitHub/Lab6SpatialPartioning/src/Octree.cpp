@@ -211,8 +211,35 @@ else
 loop through out array of nodes.
 
 if our mouse intersects with a node again, recursively call our function.
-
 */
+//Will be used to check for Altitude
+
+//check if a ray intersects a treenode
+bool Octree::intersect(const Ray &ray, const TreeNode & node, TreeNode & nodeRtn)
+{
+	bool intersects = false;
+	if (node.box.intersect(ray, 0, INFINITE))
+	{
+		if (node.children.size() == 0)
+		{
+			nodeRtn = node;
+			intersects = true;
+		}
+		else
+		{
+			for (int i = 0; i < node.children.size(); i++)
+			{
+				if (intersect(ray, node.children[i], nodeRtn))
+				{
+					intersects = true;
+				}
+			}
+		}
+	}
+	return intersects;
+
+}
+
 bool Octree::MouseIntersect(const Ray &ray, const TreeNode & node, TreeNode & nodeRtn) {
 
 	bool intersects = false;
@@ -267,29 +294,30 @@ bool Octree::BoxIntersect(const Box &box, TreeNode & node, vector<Box> & boxList
 	}
 	return intersects;
 }
-//Checking collision
-bool Octree::intersect(const ofVec3f & vec, const TreeNode & node, TreeNode & nodeRtn)
-{
-	Box temp = node.box;
-	if (temp.inside(Vector3(vec.x, vec.y, vec.z)))
-	{
-		if (node.children.size() == 0)
-		{
-			nodeRtn = node;
-			return true;
-		}
-		else
-		{
-			for (unsigned int i = 0; i < node.children.size(); i++)
-			{
-				if (intersect(vec, node.children[i], nodeRtn))
-				{
-					return true;
-				}
-			}
-		}
-	}
-}
+////Checking collision
+//
+//bool Octree::intersect(const ofVec3f & vec, const TreeNode & node, TreeNode & nodeRtn)
+//{
+//	Box temp = node.box;
+//	if (temp.inside(Vector3(vec.x, vec.y, vec.z)))
+//	{
+//		if (node.children.size() == 0)
+//		{
+//			nodeRtn = node;
+//			return true;
+//		}
+//		else
+//		{
+//			for (unsigned int i = 0; i < node.children.size(); i++)
+//			{
+//				if (intersect(vec, node.children[i], nodeRtn))
+//				{
+//					return true;
+//				}
+//			}
+//		}
+//	}
+//}
 
 void Octree::draw(TreeNode & node, int numLevels, int level) {
 	if (level >= numLevels) return;

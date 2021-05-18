@@ -28,6 +28,7 @@ public:
 	void create(const ofMesh & mesh, int numLevels);
 
 	void subdivide(const ofMesh & mesh, TreeNode & node, int numLevels, int level);
+	bool intersect(const Ray & ray, const TreeNode & node, TreeNode & nodeRtn);
 	//test function with a ray
 	bool MouseIntersect(const Ray &, const TreeNode & node, TreeNode & nodeRtn);
 	//intersection with a box

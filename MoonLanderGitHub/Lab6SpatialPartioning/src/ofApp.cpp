@@ -113,38 +113,54 @@ void ofApp::setup() {
 // incrementally update scene (animation)
 //
 void ofApp::update() {
-
-	checkCollisions();
-	if (bgrounded)
+	if (bStart)
 	{
-		velocity = glm::vec3(0, 0, 0);
-		acceleration = glm::vec3(0, 0, 0);
+		checkCollisions();
+		if (bgrounded)
+		{
+			velocity = glm::vec3(0, 0, 0);
+			acceleration = glm::vec3(0, 0, 0);
+			force = glm::vec3(0, 0, 0);
+			bOver = true;
+			//cout << "GAME OVER" << endl;
+		}
+		//ray cast on to the surface of the terrain from the position of the rover
+
+		Ray altitudeRay = Ray(Vector3(rover.getPosition().x, rover.getPosition().y, rover.getPosition().z), Vector3(rover.getPosition().x, rover.getPosition().y - 200, rover.getPosition().z));
+		TreeNode altNode;
+		/*if(octree.intersect())*/
+		if (octree.intersect(altitudeRay, octree.root, altNode))
+		{
+			altitude = glm::length(octree.mesh.getVertex(altNode.points[0]) - rover.getPosition());
+		}
+
+
+
+		int tempTime = ofGetElapsedTimeMillis() / 1000;
+		if (!bOver)
+		{
+			timer = tempTime - startTime;
+		}
+		//cout << "CAMERA POSITION:\n" << cam.getPosition() << endl;
+
+		cam.setDistance(camDist);
+		cam.setNearClip(camNearClip);
+		cam.setFov(camSetFOV);
+
+
+		//integrate();
+		//cout << "ROVER POSITION:" << rover.getPosition() << endl;
+		//force = glm::vec3(0, 0, 0);
+		//cout << "ROVER POSITION BEFORE INTEGRATE:\n" << rover.getPosition() << endl;
+		integrate();
+
+		glm::vec3 roverPosition = rover.getPosition();
+
+		//cout << "ROVER POSITION AFTER: \n" << rover.getPosition() << endl;
+		//zero out the forces
 		force = glm::vec3(0, 0, 0);
-		bOver = true;
-		cout << "GAME OVER" << endl;
 	}
 
-	int tempTime = ofGetElapsedTimeMillis() / 1000;
-	if (!bOver)
-	{
-		timer = tempTime - startTime;
-	}
-	//cout << "CAMERA POSITION:\n" << cam.getPosition() << endl;
-
-	cam.setDistance(camDist);
-	cam.setNearClip(camNearClip);
-	cam.setFov(camSetFOV);
-
-
-	//integrate();
-	//cout << "ROVER POSITION:" << rover.getPosition() << endl;
-	//force = glm::vec3(0, 0, 0);
-	//cout << "ROVER POSITION BEFORE INTEGRATE:\n" << rover.getPosition() << endl;
-	integrate();
-
-	//cout << "ROVER POSITION AFTER: \n" << rover.getPosition() << endl;
-	//zero out the forces
-	force = glm::vec3(0, 0, 0);
 
 }
 //--------------------------------------------------------------
@@ -261,6 +277,16 @@ void ofApp::draw() {
 	ofPopMatrix();
 	cam.end();
 
+	if (!bStart)
+	{
+		ofSetColor(ofColor::white);
+		ofDrawBitmapString("Press Spacebar to Start", (ofGetWindowWidth() / 2) - 92, ofGetWindowHeight() / 2 - 5);
+	}
+	if (bStart && !bOver)
+	{
+		drawText();
+	}
+
 }
 
 
@@ -364,33 +390,39 @@ void ofApp::keyPressed(int key) {
 		//X DIRECTION
 	case OF_KEY_UP:
 		bThrust = true;
-		force = float(thrust) * ofVec3f(1, 0, 0) + gravitationalForce * mass;
+		force = float(thrust) * ofVec3f(1, 0, 0);
 
 		angularVelocity = 0;
 		break;
 	case OF_KEY_DOWN:
 		bThrust = true;
-		force = float(thrust) * ofVec3f(-1, 0, 0) + gravitationalForce * mass;
+		force = float(thrust) * ofVec3f(-1, 0, 0);
 		angularVelocity = 0;
 		break;
 		//Z DIRECTION
 	case OF_KEY_RIGHT:
 		bThrust = true;
-		force = float(thrust) * ofVec3f(0, 0, 1) + gravitationalForce * mass;
+		force = float(thrust) * ofVec3f(0, 0, 1);
 		angularVelocity = 0;
 		break;
 	case OF_KEY_LEFT:
 		bThrust = true;
-		force = float(thrust) * ofVec3f(0, 0, 1) + gravitationalForce * mass;
+		force = float(thrust) * ofVec3f(0, 0, -1);
 		angularVelocity = 0;
 		break;
 		//Y DIRECTION
 	case ' ':
-		force = float(thrust) * ofVec3f(0, 1, 0) + gravitationalForce * mass;
+		if (!bStart)
+		{
+			bStart = true;
+			startTime = ofGetElapsedTimeMillis() / 1000;
+		}
+		bStart = true;
+		force = float(thrust) * ofVec3f(0, 1, 0);
 		angularVelocity = 0;
 		break;
 	case OF_KEY_CONTROL:
-		force = float(thrust) * ofVec3f(0, -1, 0) + gravitationalForce * mass;
+		force = float(thrust) * ofVec3f(0, -1, 0);
 		angularVelocity = 0;
 		break;
 		//rotation inputs
@@ -825,7 +857,7 @@ void ofApp::drawText()
 	string altitudeText = "Altitude: " + std::to_string(altitude);
 
 	//60 frames per second
-	int framerate = 60;
+	int framerate = ofGetFrameRate();
 
 	string fpsText = "Frame Rate:" + std::to_string(framerate);
 
