@@ -61,21 +61,18 @@ public:
 	float angularForce = 0;
 	float angularVelocity = 0.0;
 	float angularAcceleration = 0.0;
-
 	bool bThrust = false;
+
+	//start game or end game
 	bool bStart = false;
 	bool bOver = false;
 
-	//void integrate();
-
-
+	//models
 	ofxAssimpModelLoader mars, rover;
 
 	ofLight light;
 	//bounds: the bounding box of the rover
 	Box roverBounds;
-
-
 	Box testBox;
 	vector<Box> colBoxList;
 	bool bRoverSelected = false;
@@ -114,7 +111,7 @@ public:
 
 	int startTime;
 	int timer;
-
+	
 	int i = 0;
 
 	int maxRotations = 4;
@@ -188,5 +185,7 @@ public:
 
 	void checkCollisions();
 	void drawText();
+	void makeLandingZone();
+
 };
 

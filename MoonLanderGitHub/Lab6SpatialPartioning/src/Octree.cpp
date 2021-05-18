@@ -294,30 +294,7 @@ bool Octree::BoxIntersect(const Box &box, TreeNode & node, vector<Box> & boxList
 	}
 	return intersects;
 }
-////Checking collision
-//
-//bool Octree::intersect(const ofVec3f & vec, const TreeNode & node, TreeNode & nodeRtn)
-//{
-//	Box temp = node.box;
-//	if (temp.inside(Vector3(vec.x, vec.y, vec.z)))
-//	{
-//		if (node.children.size() == 0)
-//		{
-//			nodeRtn = node;
-//			return true;
-//		}
-//		else
-//		{
-//			for (unsigned int i = 0; i < node.children.size(); i++)
-//			{
-//				if (intersect(vec, node.children[i], nodeRtn))
-//				{
-//					return true;
-//				}
-//			}
-//		}
-//	}
-//}
+
 
 void Octree::draw(TreeNode & node, int numLevels, int level) {
 	if (level >= numLevels) return;

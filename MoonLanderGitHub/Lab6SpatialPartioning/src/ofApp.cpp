@@ -34,6 +34,7 @@ void ofApp::setup() {
 	//cam.setFov(56.44);   // approx equivalent to 28mm in 35mm format
 	timer = 0;
 
+
 	ofSetVerticalSync(true);
 	cam.disableMouseInput();
 	ofEnableSmoothing();
@@ -80,9 +81,7 @@ void ofApp::setup() {
 	//  Create Octree for testing.
 
 
-	//Octree level gui
-	gui.setup();
-	gui.add(numLevels.setup("Number of Octree Levels", 1, 1, 10));
+
 
 	bHide = false;
 
@@ -94,17 +93,16 @@ void ofApp::setup() {
 	testBox = Box(Vector3(3, 3, 0), Vector3(5, 5, 2));
 
 	startTime = 0;
-
 	float time = ofGetElapsedTimef();
 
-	//physics initialization
 
-
+	//GUIS
 	gui.setup();
 	gui.add(thrust.setup("Thrust", 100, 1, 1000));
-	//gui.add(camDist.setup("Cam Distance", 52.48, 1, 100));
 	gui.add(camNearClip.setup("Cam Near Clip", 8.425, 1, 100));
 	gui.add(camSetFOV.setup("Cam FOV", 56.44, 1, 100));
+	gui.add(numLevels.setup("Number of Octree Levels", 1, 1, 10));
+
 
 
 
@@ -122,6 +120,7 @@ void ofApp::update() {
 			acceleration = glm::vec3(0, 0, 0);
 			force = glm::vec3(0, 0, 0);
 			bOver = true;
+			bStart = false;
 			//cout << "GAME OVER" << endl;
 		}
 		//ray cast on to the surface of the terrain from the position of the rover
@@ -136,11 +135,18 @@ void ofApp::update() {
 
 
 
-		int tempTime = ofGetElapsedTimeMillis() / 1000;
+
 		if (!bOver)
 		{
-			timer = tempTime - startTime;
+			if (bThrust)
+			{
+				int tempTime = ofGetElapsedTimeMillis() / 1000;
+
+				timer = tempTime - startTime;
+
+			}
 		}
+
 		//cout << "CAMERA POSITION:\n" << cam.getPosition() << endl;
 
 		cam.setDistance(camDist);
@@ -176,6 +182,7 @@ void ofApp::draw() {
 	//push objects you want to draw on the rover or bounding box onto the object space
 
 	ofPushMatrix();
+	//makeLandingZone();
 	if (bWireframe) {                    // wireframe mode  (include axis)
 		ofDisableLighting();
 		ofSetColor(ofColor::slateGray);
@@ -326,7 +333,8 @@ void ofApp::keyPressed(int key) {
 	switch (key) {
 	case 'B':
 	case 'b':
-		//this crashes my program for some odd reason
+		//this crashes my program for some odd reason.
+		//do not use it
 		//bDisplayBBoxes = !bDisplayBBoxes;
 		break;
 	case 'C':
@@ -345,6 +353,8 @@ void ofApp::keyPressed(int key) {
 		break;
 	case 'H':
 	case 'h':
+		//hides the gui panel
+		bHide = !bHide;
 		break;
 	case 'n':
 	case 'N':
@@ -414,10 +424,9 @@ void ofApp::keyPressed(int key) {
 	case ' ':
 		if (!bStart)
 		{
-			bStart = true;
-			startTime = ofGetElapsedTimeMillis() / 1000;
+			bStart = !bStart;
 		}
-		bStart = true;
+
 		force = float(thrust) * ofVec3f(0, 1, 0);
 		angularVelocity = 0;
 		break;
@@ -467,6 +476,31 @@ void ofApp::keyReleased(int key) {
 	case 'L':
 		bThrust = false;
 		angularForce = 0;
+		break;
+	case OF_KEY_UP:
+		bThrust = false;
+		force = glm::vec3(0, 0, 0);
+		break;
+	case OF_KEY_DOWN:
+		bThrust = false;
+		force = glm::vec3(0, 0, 0);
+		break;
+		//Z DIRECTION
+	case OF_KEY_RIGHT:
+		bThrust = false;
+		force = glm::vec3(0, 0, 0);
+		break;
+	case OF_KEY_LEFT:
+		bThrust = false;
+		force = glm::vec3(0, 0, 0);
+		break;
+	case ' ':
+		bThrust = false;
+		force = glm::vec3(0, 0, 0);
+		break;
+	case OF_KEY_CONTROL:
+		bThrust = false;
+		force = glm::vec3(0, 0, 0);
 		break;
 		//break;
 	//case 'j':
@@ -841,15 +875,6 @@ void ofApp::checkCollisions()
 
 	}
 
-
-
-	/*if (roverBounds.overlap(testBox)) {
-		cout << "overlap" << endl;
-	}
-	else {
-		cout << "OK" << endl;
-	}*/
-
 }
 void ofApp::drawText()
 {
@@ -867,7 +892,26 @@ void ofApp::drawText()
 	ofDrawBitmapString(fpsText, ofGetWindowWidth() - 130, 15);
 	ofDrawBitmapString(timerText, 10, 40);
 }
-//draws landing zones
+//void ofApp::makeLandingZone()
+//{
+//	//ofSetColor(ofColor::gray);
+//	//Saves current transformations
+//	ofPushMatrix();
+//	//Rotates next drawings so they lay on the terrain
+//	ofRotateX(100);
+//	ofSetColor(ofColor::blue);
+//	ofDrawPlane(5, 5, -0.5, 10, 10);
+//	ofSetColor(ofColor::green);
+//	ofDrawPlane(-7.5, -10, -0.5, 10, 10);
+//	ofSetColor(ofColor::pink);
+//	ofDrawPlane(-4.2, 1.4, -0.5, 10, 10);
+//	ofSetColor(ofColor::white);
+//	//ofDrawPlane(6, -6, -1.6, 1, 1);
+//	ofDrawPlane(6, -6, -1.9, 10, 10);
+//	//Restores previous transformations
+//	ofPopMatrix();
+//}
+////draws landing zones
 
 
 
