@@ -4,6 +4,8 @@
 #include "ofxGui.h"
 #include  "ofxAssimpModelLoader.h"
 #include "Octree.h"
+#include "Particle.h"
+#include "ParticleEmitter.h"
 
 
 
@@ -13,7 +15,6 @@ public:
 	void setup();
 	void update();
 	void draw();
-
 	void keyPressed(int key);
 	void keyReleased(int key);
 	void mouseMoved(int x, int y);
@@ -44,7 +45,7 @@ public:
 
 	ofEasyCam cam;
 	//setup cameras later
-	ofCamera bottomCam, frontCam, followingCam, topCam, *theCam;
+	ofCamera bottomCam, frontCam, trackingCam, topCam, *currentCam;
 
 	//NEW CHANGES
 
@@ -97,6 +98,7 @@ public:
 	bool bDisplayBBoxes = false;
 	bool bgrounded = false;
 	bool bRoverLoaded;
+	bool bWin = false;
 	bool bTerrainSelected;
 
 
@@ -111,7 +113,7 @@ public:
 
 	int startTime;
 	int timer;
-	
+
 	int i = 0;
 
 	int maxRotations = 4;
@@ -157,28 +159,21 @@ public:
 		rover.setPosition(roverPosition.x, roverPosition.y, roverPosition.z);
 
 		glm::vec3 accel = acceleration;
-		accel += (force * 1.0 / mass);
+		accel += ((force * 1.0) + gravitationalForce / mass);
 		velocity += accel * dt;
 		velocity *= damping;
 
 		rotation += (angularVelocity * dt);
 
 		rover.setRotation(0, rotation, 1, 0, 0);
-
-
-		//force += gravitationalForce * mass;
-		/*if (rotateY)
-		{
-			rover.setRotation(1, rotation, 1, 0, 0);
-		}
-		if (rotateZ)
-		{
-			rover.setRotation(2, rotation, 0, 0, 1);
-		}*/
 		float a = angularAcceleration;
 		a += (angularForce * 1.0 / mass);
 		angularVelocity += a * dt;
 		angularVelocity *= damping;
+
+
+
+
 	}
 	//for taking multiply key inputs
 	map<int, bool> keymap;
@@ -186,6 +181,23 @@ public:
 	void checkCollisions();
 	void drawText();
 	void makeLandingZone();
+
+	int contactForce = 0;
+
+	int fuel = 120000;
+
+
+
+
+	//add particle effects
+	ParticleEmitter emitter;
+	ParticleEmitter explosion;
+
+	//add forces
+	TurbulenceForce *tForce;
+	GravityForce *gForce;
+	ImpulseRadialForce *iForce;
+
 
 };
 

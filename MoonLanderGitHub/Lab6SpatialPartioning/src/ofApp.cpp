@@ -32,7 +32,6 @@ void ofApp::setup() {
 	cam.setDistance(52.48);
 	//cam.setNearClip(8.425);
 	//cam.setFov(56.44);   // approx equivalent to 28mm in 35mm format
-	timer = 0;
 
 
 	ofSetVerticalSync(true);
@@ -81,7 +80,7 @@ void ofApp::setup() {
 	//  Create Octree for testing.
 
 
-
+	int score = 10000;
 
 	bHide = false;
 
@@ -92,20 +91,77 @@ void ofApp::setup() {
 
 	testBox = Box(Vector3(3, 3, 0), Vector3(5, 5, 2));
 
-	startTime = 0;
+
 	float time = ofGetElapsedTimef();
 
 
 	//GUIS
 	gui.setup();
 	gui.add(thrust.setup("Thrust", 100, 1, 1000));
-	gui.add(camNearClip.setup("Cam Near Clip", 8.425, 1, 100));
-	gui.add(camSetFOV.setup("Cam FOV", 56.44, 1, 100));
+	/*gui.add(camNearClip.setup("Cam Near Clip", 8.425, 1, 100));
+	gui.add(camSetFOV.setup("Cam FOV", 56.44, 1, 100));*/
 	gui.add(numLevels.setup("Number of Octree Levels", 1, 1, 10));
 
 
 
 
+	// set up the emitter forces
+
+	//turbulent force
+	tForce = new TurbulenceForce(ofVec3f(-20, -20, -20), ofVec3f(20, 20, 20));
+	//gravitational force
+	gForce = new GravityForce(ofVec3f(0, -10, 0));
+	//radial force
+	iForce = new ImpulseRadialForce(1000.0);
+	//Create an Emitter
+
+	emitter.setOneShot(true);
+	emitter.setEmitterType(DiskEmitter);
+	emitter.setGroupSize(100);
+	emitter.particleRadius = .001;
+	emitter.spawn(1);
+	emitter.setParticleRadius(0.5);
+	emitter.setRate(1.0);
+	emitter.setLifespan(20.0);
+	emitter.sys->addForce(tForce);
+	emitter.sys->addForce(gForce);
+	emitter.setVelocity(ofVec3f(0, 5, 0));
+
+	explosion.setOneShot(true);
+	explosion.setEmitterType(RadialEmitter);
+	explosion.setGroupSize(100);
+	explosion.particleRadius = .001;
+	explosion.spawn(1);
+	explosion.setParticleRadius(1);
+	explosion.setRate(1.0);
+	explosion.setLifespan(20.0);
+	explosion.sys->addForce(tForce);
+	explosion.sys->addForce(gForce);
+	explosion.setVelocity(ofVec3f(0, 5, 0));
+
+
+	//cameras
+
+	cam.setPosition(-20.6871, 12.2888, -11.4966);
+	cam.lookAt(glm::vec3(0, 0, 0));
+	cam.setDistance(10);
+	cam.setNearClip(.1);
+	cam.setFov(65.5);
+	glm::vec3 pos = rover.getPosition();
+
+	trackingCam.setPosition(12.0669, 14.7858, 13.9889);
+	trackingCam.lookAt(glm::vec3(pos.x, pos.y, pos.z));
+	trackingCam.setNearClip(.1);
+
+	bottomCam.setPosition(glm::vec3(pos.x, pos.y, pos.z));
+	bottomCam.lookAt(glm::vec3(0, 1, 0));
+	bottomCam.setNearClip(.1);
+
+	frontCam.setPosition(glm::vec3(pos.x, pos.y, pos.z));
+	frontCam.lookAt(glm::vec3(0, 0, 5));
+	frontCam.setNearClip(.1);
+
+	currentCam = &cam;
 }
 //--------------------------------------------------------------
 // incrementally update scene (animation)
@@ -114,14 +170,25 @@ void ofApp::update() {
 	if (bStart)
 	{
 		checkCollisions();
+
+
+
+		emitter.update();
+		explosion.update();
 		if (bgrounded)
 		{
 			velocity = glm::vec3(0, 0, 0);
 			acceleration = glm::vec3(0, 0, 0);
 			force = glm::vec3(0, 0, 0);
+		}
+		
+		//if bover, gameover
+		if (fuel = 0)
+		{
+			velocity = glm::vec3(0, 0, 0);
+			acceleration = glm::vec3(0, 0, 0);
+			force = glm::vec3(0, 0, 0);
 			bOver = true;
-			bStart = false;
-			//cout << "GAME OVER" << endl;
 		}
 		//ray cast on to the surface of the terrain from the position of the rover
 
@@ -133,8 +200,9 @@ void ofApp::update() {
 			altitude = glm::length(octree.mesh.getVertex(altNode.points[0]) - rover.getPosition());
 		}
 
-
-
+		glm::vec3 pos = rover.getPosition();
+		emitter.setPosition(glm::vec3(pos.x, pos.y, pos.z));
+		explosion.setPosition(glm::vec3(pos.x, pos.y, pos.z));
 
 		if (!bOver)
 		{
@@ -149,9 +217,9 @@ void ofApp::update() {
 
 		//cout << "CAMERA POSITION:\n" << cam.getPosition() << endl;
 
-		cam.setDistance(camDist);
-		cam.setNearClip(camNearClip);
-		cam.setFov(camSetFOV);
+		//cam.setDistance(camDist);
+		//cam.setNearClip(camNearClip);
+		//cam.setFov(camSetFOV);
 
 
 		//integrate();
@@ -160,10 +228,13 @@ void ofApp::update() {
 		//cout << "ROVER POSITION BEFORE INTEGRATE:\n" << rover.getPosition() << endl;
 		integrate();
 
-		glm::vec3 roverPosition = rover.getPosition();
+		//glm::vec3 roverPosition = rover.getPosition();
 
 		//cout << "ROVER POSITION AFTER: \n" << rover.getPosition() << endl;
 		//zero out the forces
+
+
+
 		force = glm::vec3(0, 0, 0);
 	}
 
@@ -180,7 +251,8 @@ void ofApp::draw() {
 
 	cam.begin();
 	//push objects you want to draw on the rover or bounding box onto the object space
-
+	emitter.draw();
+	explosion.draw();
 	ofPushMatrix();
 	//makeLandingZone();
 	if (bWireframe) {                    // wireframe mode  (include axis)
@@ -287,11 +359,19 @@ void ofApp::draw() {
 	if (!bStart)
 	{
 		ofSetColor(ofColor::white);
-		ofDrawBitmapString("Press Spacebar to Start", (ofGetWindowWidth() / 2) - 92, ofGetWindowHeight() / 2 - 5);
+		ofDrawBitmapString("Instructions:\n Press Spacebar to start \ni: MOVE FORWARD\nk:MOVE BACKWARD\nj:MOVE LEFT\nl:MOVE RIGHT\nq:MOVE UP\nw:MOVE DOWN\nt:INCREASE THRUST\ny:DECREASE THRUST\n", (ofGetWindowWidth() / 2) - 92, ofGetWindowHeight() / 2 - 5);
 	}
 	if (bStart && !bOver)
 	{
 		drawText();
+	}
+
+	if (bgrounded && bOver)
+	{
+		ofSetColor(ofColor::white);
+		string GameOver = "GAME OVER\n				YOU HAVE KILLED YOUR CREW MEMBERS!\n				PACK YOUR BAGS AND LEAVE!\n				YOU'RE FIRED!				NOW GET OUT OF MY OFFICE!\n";
+		ofDrawBitmapString(GameOver, (ofGetWindowWidth() / 2) - 92, ofGetWindowHeight() / 2 - 5);
+
 	}
 
 }
@@ -329,10 +409,27 @@ void ofApp::drawAxis(ofVec3f location) {
 
 void ofApp::keyPressed(int key) {
 	//insert multiply key inputs later
+
 	glm::vec3 roverPosition = rover.getPosition();
 	switch (key) {
-	case 'B':
-	case 'b':
+	case OF_KEY_F1:
+		currentCam = &cam;
+		break;
+	case OF_KEY_F2:
+		currentCam = &trackingCam;
+		break;
+	case OF_KEY_F3:
+		currentCam = &bottomCam;
+		break;
+	case OF_KEY_F4:
+		currentCam = &frontCam;
+		break;
+	case'u':
+	case'U':
+		cam.lookAt(roverPosition);
+		break;
+		/*case 'B':
+		case 'b':*/
 		//this crashes my program for some odd reason.
 		//do not use it
 		//bDisplayBBoxes = !bDisplayBBoxes;
@@ -345,7 +442,6 @@ void ofApp::keyPressed(int key) {
 
 		else
 			cam.enableMouseInput();
-
 		break;
 	case 'F':
 	case 'f':
@@ -360,8 +456,8 @@ void ofApp::keyPressed(int key) {
 	case 'N':
 		bDisplayLeafNodes = !bDisplayLeafNodes;
 		break;
-	case 'O':
-	case 'o':
+	case 'b':
+	case 'B':
 		bDisplayOctree = !bDisplayOctree;
 		break;
 	case 'r':
@@ -370,80 +466,111 @@ void ofApp::keyPressed(int key) {
 	case 's':
 		savePicture();
 		break;
-	case 't':
-		setCameraTarget();
-		break;
-	case 'u':
-		break;
+		//case 't':
+		//	setCameraTarget();
+		//	break;
 	case 'v':
 		togglePointsDisplay();
 		break;
 	case 'V':
 		break;
-	case 'w':
+	case OF_KEY_CONTROL:
 		toggleWireframeMode();
 		break;
-	case OF_KEY_ALT:
-		cam.enableMouseInput();
-		bAltKeyDown = true;
-		break;
 
-	case OF_KEY_SHIFT:
-		break;
-	case OF_KEY_DEL:
-		break;
 		//our movement will be based on the 3D coordinates.
 		//up = Y coordinates
 		//left, right movement = X coordinates
 		//towards the screen = Z coordinates
 
 		//X DIRECTION
-	case OF_KEY_UP:
+	case 'i':
+	case 'I':
+		fuel -= 10;
+		emitter.sys->reset();
+		emitter.start();
 		bThrust = true;
 		force = float(thrust) * ofVec3f(1, 0, 0);
 
 		angularVelocity = 0;
 		break;
-	case OF_KEY_DOWN:
+	case 'k':
+	case 'K':
+		fuel -= 10;
+		emitter.sys->reset();
+		emitter.start();
 		bThrust = true;
 		force = float(thrust) * ofVec3f(-1, 0, 0);
 		angularVelocity = 0;
 		break;
 		//Z DIRECTION
-	case OF_KEY_RIGHT:
+	case 'l':
+	case 'L':
+		fuel -= 10;
+		emitter.sys->reset();
+		emitter.start();
 		bThrust = true;
 		force = float(thrust) * ofVec3f(0, 0, 1);
 		angularVelocity = 0;
 		break;
-	case OF_KEY_LEFT:
+	case 'j':
+	case 'J':
+		fuel -= 10;
+
+		emitter.sys->reset();
+		emitter.start();
 		bThrust = true;
 		force = float(thrust) * ofVec3f(0, 0, -1);
 		angularVelocity = 0;
 		break;
 		//Y DIRECTION
+	case 'w':
+	case 'W':
+		fuel -= 10;
+
+		emitter.sys->reset();
+		emitter.start();
+		force = float(thrust) * ofVec3f(0, 1, 0);
+		angularVelocity = 0;
+		break;
 	case ' ':
 		if (!bStart)
 		{
 			bStart = !bStart;
 		}
-
-		force = float(thrust) * ofVec3f(0, 1, 0);
-		angularVelocity = 0;
 		break;
-	case OF_KEY_CONTROL:
+	case 't':
+	case 'T':
+		//increase thrust
+		thrust = thrust + 5;
+		break;
+	case 'y':
+	case 'Y':
+		thrust = thrust - 5;
+		break;
+	case 'q':
+	case 'Q':
+		fuel -= 10;
+
+		contactForce += 1;
+		emitter.sys->reset();
+		emitter.start();
 		force = float(thrust) * ofVec3f(0, -1, 0);
 		angularVelocity = 0;
 		break;
 		//rotation inputs
-	case 'j':
-	case 'J':
-		bThrust = true;
-		angularForce = 100.0;
-		break;
-	case 'l':
-	case 'L':
+	case 'o':
+	case 'O':
+		fuel -= 10;
+
 		bThrust = true;
 		angularForce = -100.0;
+		break;
+	case 'p':
+	case 'P':
+		fuel -= 10;
+		bThrust = true;
+		angularForce = 100.0;
 		break;
 	default:
 		break;
@@ -467,53 +594,52 @@ void ofApp::keyReleased(int key) {
 	switch (key)
 	{
 
-	case 'j':
-	case 'J':
+	case 'o':
+	case 'O':
+
 		bThrust = false;
 		angularForce = 0;
 		break;
-	case 'l':
-	case 'L':
+	case 'P':
+	case 'p':
 		bThrust = false;
 		angularForce = 0;
 		break;
-	case OF_KEY_UP:
+	case 'i':
+	case 'I':
 		bThrust = false;
 		force = glm::vec3(0, 0, 0);
 		break;
-	case OF_KEY_DOWN:
+	case 'k':
+	case 'K':
 		bThrust = false;
 		force = glm::vec3(0, 0, 0);
 		break;
 		//Z DIRECTION
-	case OF_KEY_RIGHT:
-		bThrust = false;
-		force = glm::vec3(0, 0, 0);
-		break;
-	case OF_KEY_LEFT:
-		bThrust = false;
-		force = glm::vec3(0, 0, 0);
-		break;
-	case ' ':
-		bThrust = false;
-		force = glm::vec3(0, 0, 0);
-		break;
-	case OF_KEY_CONTROL:
-		bThrust = false;
-		force = glm::vec3(0, 0, 0);
-		break;
-		//break;
-	//case 'j':
-	//case 'J':
-	//	angularForce = 0;
-	//	bThrust = false;
-	//	//break;
-	//case 'l':
-	//case 'L':
-	//	bThrust = 0;
-	//	angularForce = 0;
-		//break;
+	case 'j':
+	case 'J':
 
+		bThrust = false;
+		force = glm::vec3(0, 0, 0);
+		break;
+	case 'l':
+	case 'L':
+		bThrust = false;
+		force = glm::vec3(0, 0, 0);
+		break;
+	case 'q':
+	case 'Q':
+		contactForce -= 1;
+		bThrust = false;
+		force = glm::vec3(0, 0, 0);
+		break;
+	case 'w':
+	case 'W':
+
+
+		bThrust = false;
+		force = glm::vec3(0, 0, 0);
+		break;
 
 
 
@@ -869,9 +995,26 @@ void ofApp::checkCollisions()
 	if (octree.BoxIntersect(roverBounds, octree.root, colBoxList))
 	{
 		printf("BOX HAS INTERSECTED OCTREE!");
-		bgrounded = true;
-		//zero out gravity
-		gravitationalForce = glm::vec3(0, 0, 0);
+		//contact force
+		if (force.y <= -1000)
+		{
+			explosion.sys->reset();
+			explosion.start();
+			bgrounded = true;
+			bOver = true;
+		}
+		else
+		{
+			force = glm::vec3(0, 100, 0);
+		}
+		//check if collisions were in a designated area and provide win condition if that happens.
+
+
+
+		//bgrounded = true;
+
+		//glm::vec3 norm = glm::vec3(0, 1, 0);
+
 
 	}
 
@@ -886,11 +1029,18 @@ void ofApp::drawText()
 
 	string fpsText = "Frame Rate:" + std::to_string(framerate);
 
-	string timerText = "Time: " + std::to_string(timer);
+	string timerText = "Fuel: " + std::to_string(fuel);
+
+	string cForce = "Contact Force: " + std::to_string(contactForce);
+
+
+
 
 	ofDrawBitmapString(altitudeText, 10, 15);
 	ofDrawBitmapString(fpsText, ofGetWindowWidth() - 130, 15);
 	ofDrawBitmapString(timerText, 10, 40);
+	ofDrawBitmapString(cForce, ofGetWindowWidth() - 130, 30);
+
 }
 //void ofApp::makeLandingZone()
 //{
