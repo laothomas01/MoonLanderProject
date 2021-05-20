@@ -35,6 +35,7 @@ public:
 	void toggleSelectTerrain();
 	bool doPointSelection();
 	void setCameraTarget();
+	void initLightingMaterials();
 
 	//way to select points
 	bool mouseIntersectPlane(ofVec3f planePoint, ofVec3f planeNorm, ofVec3f &point);
@@ -115,6 +116,7 @@ public:
 	int timer;
 
 	int i = 0;
+	int landingZone = 0;
 
 	int maxRotations = 4;
 	int currentRotations = 0;
@@ -184,7 +186,8 @@ public:
 
 	int contactForce = 0;
 
-	int fuel = 120000;
+	int fuel = 0;
+	bool noFuel = false;
 
 
 
@@ -199,5 +202,8 @@ public:
 	ImpulseRadialForce *iForce;
 
 
+	//lighting
+	ofLight keyLight, rimLight, fillLight, dynamicLight;
+	vector<ofLight*> Lights;
 };
 

@@ -53,6 +53,7 @@ void ofApp::setup() {
 	mars.loadModel("geo/mars-low-v2.obj");
 	mars.setScaleNormalization(false);
 
+	
 	// create sliders for testing
 	//
 	gui.setup();
@@ -388,6 +389,7 @@ bool ofApp::doPointSelection() {
 	}
 	return bPointSelected;
 }
+
 
 // Set the camera to use the selected point as it's new target
 //  

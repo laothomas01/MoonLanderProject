@@ -17,7 +17,7 @@
 
 
 //--------------------------------------------------------------
-// setup scene, lighting, state and load geometry
+// setup scene, lighting, state and load g eometry
 //
 void ofApp::setup() {
 	bWireframe = false;
@@ -39,11 +39,17 @@ void ofApp::setup() {
 	ofEnableSmoothing();
 	ofEnableDepthTest();
 
+
 	rotation = 90.0;
 
+
+	ofDisableArbTex();     // disable rectangular textures
+
+
+	fuel = 120000;
 	// setup rudimentary lighting 
 	//
-	initLightingAndMaterials();
+	initLightingMaterials();
 	//load the terrain
 	printf("Map loaded. Creating Octree....\n");
 	if (mars.loadModel("geo/mars-low-5x-v2.obj"))
@@ -162,6 +168,21 @@ void ofApp::setup() {
 	frontCam.setNearClip(.1);
 
 	currentCam = &cam;
+
+
+
+	dynamicLight.setup();
+	dynamicLight.enable();
+	dynamicLight.setSpotlight();
+	dynamicLight.setScale(1);
+	dynamicLight.setSpotlightCutOff(10);
+	dynamicLight.setAttenuation(.2, .001, .001);
+	dynamicLight.setAmbientColor(ofFloatColor(1, 1, 1));
+	dynamicLight.setDiffuseColor(ofFloatColor(1, 1, 1));
+	dynamicLight.setSpecularColor(ofFloatColor(1, 1, 1));
+	dynamicLight.rotate(180, ofVec3f(0, 1, 0));
+	dynamicLight.setPosition((ofVec3f)(rover.getPosition(), rover.getPosition() + 10, rover.getPosition()));
+	dynamicLight.rotate(90, ofVec3f(1, 0, 0));
 }
 //--------------------------------------------------------------
 // incrementally update scene (animation)
@@ -181,15 +202,45 @@ void ofApp::update() {
 			acceleration = glm::vec3(0, 0, 0);
 			force = glm::vec3(0, 0, 0);
 		}
-		
+
 		//if bover, gameover
-		if (fuel = 0)
+		if (fuel <= 0)
 		{
 			velocity = glm::vec3(0, 0, 0);
 			acceleration = glm::vec3(0, 0, 0);
 			force = glm::vec3(0, 0, 0);
 			bOver = true;
+			noFuel = true;
 		}
+
+
+		/*
+		ofPushMatrix();
+		//rotate plane drawings so they are on the terrain
+		ofRotateX(100);
+		ofSetColor(ofColor::blue);
+		ofNoFill();
+		ofDrawEllipse(5, 5, -4, 10, 10);
+		//Restores previous transformations
+		ofPopMatrix();
+		*/
+		float rovx = roverPosition.x, rovy = roverPosition.y, rovz = roverPosition.z;
+
+		if ((rovx >= 4.45 && rovx <= 9.0) && (rovy >= 1.5 && rovy <= 2.21698) && (rovz >= 5.11 && rovz <= 7.7386))
+		{
+			bgrounded = true;
+
+			bWin = true;
+		}
+
+
+		cout << "ROVER POSITION:" << roverPosition << endl;
+		//cam positions
+		trackingCam.lookAt(roverPosition);
+		bottomCam.setPosition(roverPosition.x, roverPosition.y + .125, roverPosition.z);
+		frontCam.setPosition(roverPosition.x, roverPosition.y + 1, roverPosition.z);
+		//dynamic light position
+		dynamicLight.setPosition((ofVec3f)(rover.getPosition(), rover.getPosition() + 10, rover.getPosition()));
 		//ray cast on to the surface of the terrain from the position of the rover
 
 		Ray altitudeRay = Ray(Vector3(rover.getPosition().x, rover.getPosition().y, rover.getPosition().z), Vector3(rover.getPosition().x, rover.getPosition().y - 200, rover.getPosition().z));
@@ -249,11 +300,13 @@ void ofApp::draw() {
 	if (!bHide) gui.draw();
 	glDepthMask(true);
 
-	cam.begin();
+	currentCam->begin();
 	//push objects you want to draw on the rover or bounding box onto the object space
 	emitter.draw();
 	explosion.draw();
 	ofPushMatrix();
+
+	makeLandingZone();
 	//makeLandingZone();
 	if (bWireframe) {                    // wireframe mode  (include axis)
 		ofDisableLighting();
@@ -354,7 +407,7 @@ void ofApp::draw() {
 	//ofDrawLine(rover.getPosition(), rover.getPosition() * 1000);
 
 	ofPopMatrix();
-	cam.end();
+	currentCam->end();
 
 	if (!bStart)
 	{
@@ -373,6 +426,22 @@ void ofApp::draw() {
 		ofDrawBitmapString(GameOver, (ofGetWindowWidth() / 2) - 92, ofGetWindowHeight() / 2 - 5);
 
 	}
+	if (noFuel && bOver)
+	{
+		ofSetColor(ofColor::white);
+		string GameOver = "GAME OVER\n				SO WE ARE OUT OF FUEL.....!@#$%^&*()_+\n";
+		ofDrawBitmapString(GameOver, (ofGetWindowWidth() / 2) - 92, ofGetWindowHeight() / 2 - 5);
+	}
+
+	if (bWin  && bgrounded)
+	{
+		ofSetColor(ofColor::teal);
+		string win = "YOU WIN!";
+		ofDrawBitmapString(win, ofGetWindowWidth() / 2, ofGetWindowHeight() / 2);
+	}
+
+
+
 
 }
 
@@ -412,16 +481,16 @@ void ofApp::keyPressed(int key) {
 
 	glm::vec3 roverPosition = rover.getPosition();
 	switch (key) {
-	case OF_KEY_F1:
+	case '1':
 		currentCam = &cam;
 		break;
-	case OF_KEY_F2:
+	case '2':
 		currentCam = &trackingCam;
 		break;
-	case OF_KEY_F3:
+	case '3':
 		currentCam = &bottomCam;
 		break;
-	case OF_KEY_F4:
+	case '4':
 		currentCam = &frontCam;
 		break;
 	case'u':
@@ -463,12 +532,12 @@ void ofApp::keyPressed(int key) {
 	case 'r':
 		cam.reset();
 		break;
-	case 's':
-		savePicture();
-		break;
-		//case 't':
-		//	setCameraTarget();
-		//	break;
+		/*case 's':
+			savePicture();
+			break;*/
+			//case 't':
+			//	setCameraTarget();
+			//	break;
 	case 'v':
 		togglePointsDisplay();
 		break;
@@ -506,7 +575,7 @@ void ofApp::keyPressed(int key) {
 		//Z DIRECTION
 	case 'l':
 	case 'L':
-		fuel -= 10;
+		fuel -= 1000;
 		emitter.sys->reset();
 		emitter.start();
 		bThrust = true;
@@ -515,7 +584,7 @@ void ofApp::keyPressed(int key) {
 		break;
 	case 'j':
 	case 'J':
-		fuel -= 10;
+		fuel -= 1000;
 
 		emitter.sys->reset();
 		emitter.start();
@@ -526,7 +595,7 @@ void ofApp::keyPressed(int key) {
 		//Y DIRECTION
 	case 'w':
 	case 'W':
-		fuel -= 10;
+		fuel -= 1000;
 
 		emitter.sys->reset();
 		emitter.start();
@@ -550,7 +619,7 @@ void ofApp::keyPressed(int key) {
 		break;
 	case 'q':
 	case 'Q':
-		fuel -= 10;
+		fuel -= 1000;
 
 		contactForce += 1;
 		emitter.sys->reset();
@@ -561,14 +630,14 @@ void ofApp::keyPressed(int key) {
 		//rotation inputs
 	case 'o':
 	case 'O':
-		fuel -= 10;
+		fuel -= 100;
 
 		bThrust = true;
 		angularForce = -100.0;
 		break;
 	case 'p':
 	case 'P':
-		fuel -= 10;
+		fuel -= 100;
 		bThrust = true;
 		angularForce = 100.0;
 		break;
@@ -817,40 +886,6 @@ void ofApp::gotMessage(ofMessage msg) {
 //--------------------------------------------------------------
 // setup basic ambient lighting in GL  (for now, enable just 1 light)
 //
-void ofApp::initLightingAndMaterials() {
-
-	static float ambient[] =
-	{ .5f, .5f, .5, 1.0f };
-	static float diffuse[] =
-	{ 1.0f, 1.0f, 1.0f, 1.0f };
-
-	static float position[] =
-	{ 5.0, 5.0, 5.0, 0.0 };
-
-	static float lmodel_ambient[] =
-	{ 1.0f, 1.0f, 1.0f, 1.0f };
-
-	static float lmodel_twoside[] =
-	{ GL_TRUE };
-
-
-	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
-	glLightfv(GL_LIGHT0, GL_POSITION, position);
-
-	glLightfv(GL_LIGHT1, GL_AMBIENT, ambient);
-	glLightfv(GL_LIGHT1, GL_DIFFUSE, diffuse);
-	glLightfv(GL_LIGHT1, GL_POSITION, position);
-
-
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
-	glLightModelfv(GL_LIGHT_MODEL_TWO_SIDE, lmodel_twoside);
-
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	//	glEnable(GL_LIGHT1);
-	glShadeModel(GL_SMOOTH);
-}
 
 void ofApp::savePicture() {
 	ofImage picture;
@@ -994,9 +1029,32 @@ void ofApp::checkCollisions()
 	//octree intersects, boxes are pushed on to an array of collision boxes
 	if (octree.BoxIntersect(roverBounds, octree.root, colBoxList))
 	{
+
+
+		/*
+
+		ofSetColor(ofColor::blue);
+	ofNoFill();
+	ofDrawEllipse(mars.getPosition(), 10, 10);
+	ofSetColor(ofColor::gold);
+	ofNoFill();
+	ofDrawEllipse(-20, -20, 1, 10, 10);
+	ofNoFill();
+	ofSetColor(ofColor::green);
+	ofDrawEllipse(-10, -10, 1, 10, 10);
+	ofSetColor(ofColor::pink);
+	ofNoFill();
+	ofDrawEllipse(-5, 5, 1, 10, 10);
+	ofSetColor(ofColor::white);
+	ofNoFill();
+	ofDrawEllipse(6, -6, 0, 10, 10);
+	ofSetColor(ofColor::aliceBlue);
+
+
+		*/
 		printf("BOX HAS INTERSECTED OCTREE!");
 		//contact force
-		if (force.y <= -1000)
+		if (force.y <= -5000)
 		{
 			explosion.sys->reset();
 			explosion.start();
@@ -1005,8 +1063,12 @@ void ofApp::checkCollisions()
 		}
 		else
 		{
-			force = glm::vec3(0, 100, 0);
+			force = glm::vec3(0, 200, 0);
 		}
+		float roverPosX = rover.getPosition().x;
+		float roverPosY = rover.getPosition().y;
+		float roverPosZ = rover.getPosition().z;
+		//float 
 		//check if collisions were in a designated area and provide win condition if that happens.
 
 
@@ -1042,26 +1104,67 @@ void ofApp::drawText()
 	ofDrawBitmapString(cForce, ofGetWindowWidth() - 130, 30);
 
 }
-//void ofApp::makeLandingZone()
-//{
-//	//ofSetColor(ofColor::gray);
-//	//Saves current transformations
-//	ofPushMatrix();
-//	//Rotates next drawings so they lay on the terrain
-//	ofRotateX(100);
-//	ofSetColor(ofColor::blue);
-//	ofDrawPlane(5, 5, -0.5, 10, 10);
-//	ofSetColor(ofColor::green);
-//	ofDrawPlane(-7.5, -10, -0.5, 10, 10);
-//	ofSetColor(ofColor::pink);
-//	ofDrawPlane(-4.2, 1.4, -0.5, 10, 10);
-//	ofSetColor(ofColor::white);
-//	//ofDrawPlane(6, -6, -1.6, 1, 1);
-//	ofDrawPlane(6, -6, -1.9, 10, 10);
-//	//Restores previous transformations
-//	ofPopMatrix();
-//}
-////draws landing zones
+
+void ofApp::initLightingMaterials()
+{
+	keyLight.setup();
+	keyLight.enable();
+	keyLight.setAreaLight(1, 1);
+
+	keyLight.setAmbientColor(ofFloatColor(1, 1, 1));
+	keyLight.setDiffuseColor(ofFloatColor(1, 1, 1));
+	keyLight.setSpecularColor(ofFloatColor(1, 1, 1));
+
+	keyLight.rotate(45, ofVec3f(0, 1, 0));
+	keyLight.rotate(-45, ofVec3f(1, 0, 0));
+	keyLight.setSpotlightCutOff(75);
+	keyLight.setPosition(33, 15, 33);
+
+	fillLight.setup();
+	fillLight.enable();
+	fillLight.setSpotlight();
+	fillLight.setScale(.05);
+	fillLight.setSpotlightCutOff(0);						//Turned off for better effect
+	fillLight.setAttenuation(2, .001, .001);
+	fillLight.setAmbientColor(ofFloatColor(1, 1, 1));
+	fillLight.setDiffuseColor(ofFloatColor(1, 1, 1));
+	fillLight.setSpecularColor(ofFloatColor(1, 1, 1));
+	fillLight.rotate(-10, ofVec3f(1, 0, 0));
+	fillLight.rotate(-45, ofVec3f(0, 1, 0));
+	fillLight.setPosition(-5, 5.68, 5);
+
+	rimLight.setup();
+	rimLight.enable();
+	rimLight.setSpotlight();
+	rimLight.setScale(.05);
+	rimLight.setSpotlightCutOff(0);				// Turned it off for a better effect
+	rimLight.setAttenuation(.2, .001, .001);
+
+	rimLight.setAmbientColor(ofFloatColor(1, 1, 1));
+	rimLight.setDiffuseColor(ofFloatColor(1, 1, 1));
+	rimLight.setSpecularColor(ofFloatColor(1, 1, 1));
+	rimLight.rotate(180, ofVec3f(0, 1, 0));
+	rimLight.setPosition(0, 5.55, -14);
+	rimLight.rotate(30, ofVec3f(1, 0, 0));
+
+
+}
+
+void ofApp::makeLandingZone()
+{
+
+	ofPushMatrix();
+	//rotate plane drawings so they are on the terrain
+	ofRotateX(100);
+	ofSetColor(ofColor::blue);
+	ofNoFill();
+	ofDrawEllipse(5, 5, -4, 10, 10);
+	//Restores previous transformations
+	ofPopMatrix();
+}
+
+
+
 
 
 
