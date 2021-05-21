@@ -1,6 +1,6 @@
 #include "Particle.h"
 
-
+//  Kevin M. Smith - CS 134 SJSU
 Particle::Particle() {
 
 	// initialize particle with some reasonable values first;
@@ -24,7 +24,7 @@ void Particle::draw() {
 }
 
 // write your own integrator here.. (hint: it's only 3 lines of code)
-//
+//THOMAS LAO
 void Particle::integrate() {
 
 

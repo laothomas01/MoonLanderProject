@@ -205,5 +205,20 @@ public:
 	//lighting
 	ofLight keyLight, rimLight, fillLight, dynamicLight;
 	vector<ofLight*> Lights;
+
+
+	ofSoundPlayer backgroundMusic;
+	ofSoundPlayer thrustSound;
+	ofSoundPlayer crashSound;
+	ofSoundPlayer winSound;
+
+	ofImage background;
+
+	//implement shaders
+	ofVbo vbo;
+	ofShader shader;
+	ofTexture particleTex;
+	void loadVbo();
+	int radius = 0;
 };
 

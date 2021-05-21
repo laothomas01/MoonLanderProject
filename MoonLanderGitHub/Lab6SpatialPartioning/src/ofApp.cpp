@@ -29,10 +29,11 @@ void ofApp::setup() {
 	//	ofSetWindowShape(1024, 768);
 	gravitationalForce = glm::vec3(0, -terrainGravity, 0);
 	//GUI PANEL THIS 
-	cam.setDistance(52.48);
+
 	//cam.setNearClip(8.425);
 	//cam.setFov(56.44);   // approx equivalent to 28mm in 35mm format
 
+	radius = 5;
 
 	ofSetVerticalSync(true);
 	cam.disableMouseInput();
@@ -50,6 +51,8 @@ void ofApp::setup() {
 	// setup rudimentary lighting 
 	//
 	initLightingMaterials();
+	//load images
+	background.loadImage("images/groundback.jpg");
 	//load the terrain
 	printf("Map loaded. Creating Octree....\n");
 	if (mars.loadModel("geo/mars-low-5x-v2.obj"))
@@ -77,6 +80,37 @@ void ofApp::setup() {
 	{
 		printf("Vehicle could not be loaded.\n");
 		ofExit(0);
+	}
+
+	if (backgroundMusic.loadSound("sounds/BG.mp3") && crashSound.loadSound("sounds/Crash.mp3")
+		&& thrustSound.loadSound("sounds/Thrusters.mp3")
+		&& winSound.loadSound("sounds/Win.mp3")) {
+
+		backgroundMusic.setVolume(0.5);
+		thrustSound.setVolume(1);
+		crashSound.setVolume(0.5);
+		winSound.setVolume(1);
+		cout << "SOUND LOADDED SUCCESSFULLY..." << endl;
+	}
+	else
+	{
+		cout << "SOUNDS COULD NOT BE LOADED" << endl;
+	}
+
+
+	// load the shader
+//
+//#ifdef TARGET_OPENGLES
+//	shader.load("shaders_gles/shader");
+//#else
+//	shader.load("shaders/shader");
+//#endif
+//
+
+	shader.load("shaders/shader.frag");
+	if (!ofLoadImage(particleTex, "images/dot.png")) {
+		cout << "Particle Texture File: images/dot.png not found" << endl;
+		ofExit();
 	}
 
 
@@ -123,7 +157,7 @@ void ofApp::setup() {
 
 	emitter.setOneShot(true);
 	emitter.setEmitterType(DiskEmitter);
-	emitter.setGroupSize(100);
+	emitter.setGroupSize(50);
 	emitter.particleRadius = .001;
 	emitter.spawn(1);
 	emitter.setParticleRadius(0.5);
@@ -135,7 +169,7 @@ void ofApp::setup() {
 
 	explosion.setOneShot(true);
 	explosion.setEmitterType(RadialEmitter);
-	explosion.setGroupSize(100);
+	explosion.setGroupSize(50);
 	explosion.particleRadius = .001;
 	explosion.spawn(1);
 	explosion.setParticleRadius(1);
@@ -148,10 +182,11 @@ void ofApp::setup() {
 
 	//cameras
 
-	cam.setPosition(-20.6871, 12.2888, -11.4966);
-	cam.lookAt(glm::vec3(0, 0, 0));
-	cam.setDistance(10);
-	cam.setNearClip(.1);
+
+	cam.setPosition(-45.6258, 9.35812, 4.17239);
+	cam.lookAt(glm::vec3(0.9757, -0.200122, -0.0892259));
+	cam.setDistance(46.7621);
+	cam.setNearClip(0.1);
 	cam.setFov(65.5);
 	glm::vec3 pos = rover.getPosition();
 
@@ -188,6 +223,22 @@ void ofApp::setup() {
 // incrementally update scene (animation)
 //
 void ofApp::update() {
+
+
+	/*
+
+	cam.setPosition(-55.3686, 19.3713, -2.41437);
+	cam.lookAt(glm::vec3(0, 0, 0));
+	cam.setDistance(10);
+	cam.setNearClip(.1);
+	cam.setFov(65.5);
+
+	*/
+	/*cout << "DISTANCE:\n" << cam.getDistance() << endl;
+	cout << "FOV:\n" << cam.getFov() << endl;
+	cout << "SET NEAT CLIP\n" << cam.getNearClip() << endl;
+	cout << "LOOK AT:\n" << cam.getLookAtDir() << endl;
+	cout << "CAM POSITION\n" << cam.getPosition() << endl;*/
 	if (bStart)
 	{
 		checkCollisions();
@@ -213,7 +264,7 @@ void ofApp::update() {
 			noFuel = true;
 		}
 
-
+		if (!backgroundMusic.isPlaying()) backgroundMusic.play();
 		/*
 		ofPushMatrix();
 		//rotate plane drawings so they are on the terrain
@@ -234,7 +285,7 @@ void ofApp::update() {
 		}
 
 
-		cout << "ROVER POSITION:" << roverPosition << endl;
+		//cout << "ROVER POSITION:" << roverPosition << endl;
 		//cam positions
 		trackingCam.lookAt(roverPosition);
 		bottomCam.setPosition(roverPosition.x, roverPosition.y + .125, roverPosition.z);
@@ -294,18 +345,27 @@ void ofApp::update() {
 //--------------------------------------------------------------
 void ofApp::draw() {
 
-	ofBackground(ofColor::black);
+
+
+	loadVbo();
 
 	glDepthMask(false);
+
+	ofBackground(ofColor::black);
+	//THOMAS LAO
+	background.draw(500, 19.3713, -2.41437);
 	if (!bHide) gui.draw();
+	//ofBackground(ofColor::black);
 	glDepthMask(true);
+
 
 	currentCam->begin();
 	//push objects you want to draw on the rover or bounding box onto the object space
-	emitter.draw();
+	//emitter.draw();
 	explosion.draw();
-	ofPushMatrix();
 
+	ofPushMatrix();
+	//THOMAS LAO
 	makeLandingZone();
 	//makeLandingZone();
 	if (bWireframe) {                    // wireframe mode  (include axis)
@@ -375,6 +435,31 @@ void ofApp::draw() {
 		ofDrawSphere(selectedPoint, .1);
 	}
 
+	glDepthMask(GL_FALSE);
+	ofSetColor(ofColor::orange);
+
+	// this makes everything look glowy :) 
+	ofEnableBlendMode(OF_BLENDMODE_ADD);
+	ofEnablePointSprites();
+
+	// begin drawing in the camera
+	shader.begin();
+
+	// draw particle emitter here..
+	particleTex.bind();
+	vbo.draw(GL_POINTS, 0, (int)emitter.sys->particles.size());
+	emitter.draw();
+	particleTex.unbind();
+
+	//  end drawing in the camera
+	// 
+	shader.end();
+
+	ofDisablePointSprites();
+	ofDisableBlendMode();
+	glDepthMask(GL_TRUE);
+	ofEnableAlphaBlending();
+
 
 	// recursively draw octree
 	//
@@ -406,9 +491,10 @@ void ofApp::draw() {
 	//ofSetColor(ofColor::red);
 	//ofDrawLine(rover.getPosition(), rover.getPosition() * 1000);
 
+
 	ofPopMatrix();
 	currentCam->end();
-
+	//THOMAS LAO
 	if (!bStart)
 	{
 		ofSetColor(ofColor::white);
@@ -435,9 +521,11 @@ void ofApp::draw() {
 
 	if (bWin  && bgrounded)
 	{
+
 		ofSetColor(ofColor::teal);
 		string win = "YOU WIN!";
 		ofDrawBitmapString(win, ofGetWindowWidth() / 2, ofGetWindowHeight() / 2);
+		if (!winSound.isPlaying()) winSound.play();
 	}
 
 
@@ -475,7 +563,7 @@ void ofApp::drawAxis(ofVec3f location) {
 	ofPopMatrix();
 }
 
-
+//THOMAS LAO
 void ofApp::keyPressed(int key) {
 	//insert multiply key inputs later
 
@@ -543,16 +631,16 @@ void ofApp::keyPressed(int key) {
 		break;
 	case 'V':
 		break;
-	case OF_KEY_CONTROL:
-		toggleWireframeMode();
-		break;
+		/*case OF_KEY_CONTROL:
+			toggleWireframeMode();
+			break;
+	*/
+	//our movement will be based on the 3D coordinates.
+	//up = Y coordinates
+	//left, right movement = X coordinates
+	//towards the screen = Z coordinates
 
-		//our movement will be based on the 3D coordinates.
-		//up = Y coordinates
-		//left, right movement = X coordinates
-		//towards the screen = Z coordinates
-
-		//X DIRECTION
+	//X DIRECTION
 	case 'i':
 	case 'I':
 		fuel -= 10;
@@ -560,7 +648,7 @@ void ofApp::keyPressed(int key) {
 		emitter.start();
 		bThrust = true;
 		force = float(thrust) * ofVec3f(1, 0, 0);
-
+		if (!thrustSound.isPlaying()) thrustSound.play();
 		angularVelocity = 0;
 		break;
 	case 'k':
@@ -570,6 +658,7 @@ void ofApp::keyPressed(int key) {
 		emitter.start();
 		bThrust = true;
 		force = float(thrust) * ofVec3f(-1, 0, 0);
+		if (!thrustSound.isPlaying()) thrustSound.play();
 		angularVelocity = 0;
 		break;
 		//Z DIRECTION
@@ -580,6 +669,7 @@ void ofApp::keyPressed(int key) {
 		emitter.start();
 		bThrust = true;
 		force = float(thrust) * ofVec3f(0, 0, 1);
+		if (!thrustSound.isPlaying()) thrustSound.play();
 		angularVelocity = 0;
 		break;
 	case 'j':
@@ -590,6 +680,7 @@ void ofApp::keyPressed(int key) {
 		emitter.start();
 		bThrust = true;
 		force = float(thrust) * ofVec3f(0, 0, -1);
+		if (!thrustSound.isPlaying()) thrustSound.play();
 		angularVelocity = 0;
 		break;
 		//Y DIRECTION
@@ -600,6 +691,7 @@ void ofApp::keyPressed(int key) {
 		emitter.sys->reset();
 		emitter.start();
 		force = float(thrust) * ofVec3f(0, 1, 0);
+		if (!thrustSound.isPlaying()) thrustSound.play();
 		angularVelocity = 0;
 		break;
 	case ' ':
@@ -625,13 +717,14 @@ void ofApp::keyPressed(int key) {
 		emitter.sys->reset();
 		emitter.start();
 		force = float(thrust) * ofVec3f(0, -1, 0);
+		if (!thrustSound.isPlaying()) thrustSound.play();
 		angularVelocity = 0;
 		break;
 		//rotation inputs
 	case 'o':
 	case 'O':
 		fuel -= 100;
-
+		if (!thrustSound.isPlaying()) thrustSound.play();
 		bThrust = true;
 		angularForce = -100.0;
 		break;
@@ -639,6 +732,7 @@ void ofApp::keyPressed(int key) {
 	case 'P':
 		fuel -= 100;
 		bThrust = true;
+		if (!thrustSound.isPlaying()) thrustSound.play();
 		angularForce = 100.0;
 		break;
 	default:
@@ -668,39 +762,47 @@ void ofApp::keyReleased(int key) {
 
 		bThrust = false;
 		angularForce = 0;
+		thrustSound.stop();
 		break;
 	case 'P':
 	case 'p':
 		bThrust = false;
 		angularForce = 0;
+		thrustSound.stop();
 		break;
 	case 'i':
 	case 'I':
 		bThrust = false;
 		force = glm::vec3(0, 0, 0);
+		thrustSound.stop();
 		break;
 	case 'k':
 	case 'K':
 		bThrust = false;
 		force = glm::vec3(0, 0, 0);
+		thrustSound.stop();
 		break;
 		//Z DIRECTION
 	case 'j':
 	case 'J':
 
 		bThrust = false;
+
 		force = glm::vec3(0, 0, 0);
+		thrustSound.stop();
 		break;
 	case 'l':
 	case 'L':
 		bThrust = false;
 		force = glm::vec3(0, 0, 0);
+		thrustSound.stop();
 		break;
 	case 'q':
 	case 'Q':
 		contactForce -= 1;
 		bThrust = false;
 		force = glm::vec3(0, 0, 0);
+		thrustSound.stop();
 		break;
 	case 'w':
 	case 'W':
@@ -708,6 +810,8 @@ void ofApp::keyReleased(int key) {
 
 		bThrust = false;
 		force = glm::vec3(0, 0, 0);
+		thrustSound.stop();
+
 		break;
 
 
@@ -831,7 +935,7 @@ void ofApp::mouseDragged(int x, int y, int button) {
 		octree.BoxIntersect(roverBounds, octree.root, colBoxList);
 
 
-
+		//THOMAS LAO
 		if (roverBounds.overlap(testBox)) {
 			cout << "overlap" << endl;
 		}
@@ -1016,7 +1120,7 @@ glm::vec3 ofApp::getMousePointOnPlane(glm::vec3 planePt, glm::vec3 planeNorm) {
 	else return glm::vec3(0, 0, 0);
 }
 
-
+//THOMAS LAO
 void ofApp::checkCollisions()
 {
 	ofVec3f min = rover.getSceneMin() + rover.getPosition();
@@ -1031,56 +1135,30 @@ void ofApp::checkCollisions()
 	{
 
 
-		/*
-
-		ofSetColor(ofColor::blue);
-	ofNoFill();
-	ofDrawEllipse(mars.getPosition(), 10, 10);
-	ofSetColor(ofColor::gold);
-	ofNoFill();
-	ofDrawEllipse(-20, -20, 1, 10, 10);
-	ofNoFill();
-	ofSetColor(ofColor::green);
-	ofDrawEllipse(-10, -10, 1, 10, 10);
-	ofSetColor(ofColor::pink);
-	ofNoFill();
-	ofDrawEllipse(-5, 5, 1, 10, 10);
-	ofSetColor(ofColor::white);
-	ofNoFill();
-	ofDrawEllipse(6, -6, 0, 10, 10);
-	ofSetColor(ofColor::aliceBlue);
-
-
-		*/
 		printf("BOX HAS INTERSECTED OCTREE!");
 		//contact force
-		if (force.y <= -5000)
+		force = force + velocity * mass * 1 / 60;
+		cout << "FORCE:" << force << endl;
+		//THOMAS LAO
+		if (force.y <= -10)
 		{
 			explosion.sys->reset();
 			explosion.start();
 			bgrounded = true;
 			bOver = true;
+			crashSound.play();
+
 		}
-		else
-		{
-			force = glm::vec3(0, 200, 0);
-		}
-		float roverPosX = rover.getPosition().x;
-		float roverPosY = rover.getPosition().y;
-		float roverPosZ = rover.getPosition().z;
-		//float 
-		//check if collisions were in a designated area and provide win condition if that happens.
+		//THOMAS LAO
+		force = glm::vec3(0, 200, 0);
 
 
-
-		//bgrounded = true;
-
-		//glm::vec3 norm = glm::vec3(0, 1, 0);
 
 
 	}
 
 }
+//THOMAS LAO
 void ofApp::drawText()
 {
 	ofSetColor(ofColor::white);
@@ -1104,7 +1182,7 @@ void ofApp::drawText()
 	ofDrawBitmapString(cForce, ofGetWindowWidth() - 130, 30);
 
 }
-
+//THOMAS LAO
 void ofApp::initLightingMaterials()
 {
 	keyLight.setup();
@@ -1149,7 +1227,7 @@ void ofApp::initLightingMaterials()
 
 
 }
-
+//THOMAS LAO
 void ofApp::makeLandingZone()
 {
 
@@ -1163,7 +1241,24 @@ void ofApp::makeLandingZone()
 	ofPopMatrix();
 }
 
+void ofApp::loadVbo()
+{
+	if (emitter.sys->particles.size() < 1) return;
 
+	vector<ofVec3f> sizes;
+	vector<ofVec3f> points;
+	for (int i = 0; i < emitter.sys->particles.size(); i++)
+	{
+		points.push_back(emitter.sys->particles[i].position);
+		sizes.push_back(ofVec3f(20));
+	}
+	// upload the data to the vbo
+	//
+	int total = (int)points.size();
+	vbo.clear();
+	vbo.setVertexData(&points[0], total, GL_STATIC_DRAW);
+	vbo.setNormalData(&sizes[0], total, GL_STATIC_DRAW);
+}
 
 
 
