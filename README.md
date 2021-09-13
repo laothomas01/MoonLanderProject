@@ -17,8 +17,8 @@
 * w : move up
 * t : increase thurst
 * y: decrease thrust
-# 
-    
+# How to play this game
+  Locate the bin folder after cloning this repository. Locate the bin folder and run Lab6SpatialPartioning_debug 
     
   
   
