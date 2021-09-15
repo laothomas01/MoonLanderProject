@@ -19,6 +19,10 @@
 * y: decrease thrust
 # How to launch this game
   Locate the bin folder after cloning this repository and run Lab6SpatialPartioning_debug 
+
+# Screenshots
+
+
     
   
   
