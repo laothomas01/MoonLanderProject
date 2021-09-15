@@ -17,6 +17,8 @@
 * w : move up
 * t : increase thurst
 * y: decrease thrust
+* o : rotate left
+* p : rotate right
 # How to launch this game
   Locate the bin folder after cloning this repository and run Lab6SpatialPartioning_debug 
 
