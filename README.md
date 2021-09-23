@@ -3,12 +3,7 @@
   This is a moon lander project designed in my Computer Game Design and Programming course at San Jose State University. It is programmed in C++ using OpenGL's Openframeworks. 
   
   The goal of the game is to land your vehicle within the blue circle without running out of fuel or crashing.   
-# Features
-* implementation of basic physics
-* particle shaders
-* collision detection
-* changing the camera perspective
-* imported 3d graphics
+
 # Game Controls
 * Spacebar - starts game
 * i : move foward
