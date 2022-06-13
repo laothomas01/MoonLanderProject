@@ -1,6 +1,6 @@
 # CS134 MoonLanderProject
 # About:
-  This is a moon lander project designed in my Computer Game Design and Programming course at San Jose State University. It is programmed in C++ using OpenGL's Openframeworks. 
+  This is a moon lander project designed in my Computer Game Design and Programming course at San Jose State University. It is programmed in C++ using OpenGL's Openframeworks with applied basic physics and vector mathematics. 
   
   The goal of the game is to land your vehicle within the blue circle without running out of fuel or crashing.   
 
